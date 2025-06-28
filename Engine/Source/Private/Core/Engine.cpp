@@ -18,8 +18,8 @@ void Stasis::Engine::Initialize()
     }
 
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(720, 405, "Stasis", nullptr, nullptr);
-    if (!window)
+    Window = glfwCreateWindow(720, 405, "Stasis", nullptr, nullptr);
+    if (!Window)
     {
         glfwTerminate();
         LogEngine->Error("Failed to create GLFW window.");
@@ -27,7 +27,7 @@ void Stasis::Engine::Initialize()
     }
 
     /* Make the window's context current */
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(Window);
 }
 
 void Stasis::Engine::Run()
@@ -35,7 +35,7 @@ void Stasis::Engine::Run()
     auto PreviousTime = std::chrono::high_resolution_clock::now();
 
     unsigned int FrameCount = 0;
-    while (!glfwWindowShouldClose(window) && IsRunning)
+    while (!glfwWindowShouldClose(Window) && IsRunning)
     {
         const auto CurrentTime = std::chrono::high_resolution_clock::now();
         const float Elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(CurrentTime - PreviousTime).count());
@@ -44,7 +44,7 @@ void Stasis::Engine::Run()
         PreviousTime = CurrentTime;
         
         /* Swap front and back buffers */
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(Window);
 
         /* Poll for and process events */
         glfwPollEvents();

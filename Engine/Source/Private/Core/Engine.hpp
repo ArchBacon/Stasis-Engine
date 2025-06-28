@@ -10,7 +10,7 @@ namespace Stasis
     class Engine
     {
         bool IsRunning {true};
-        GLFWwindow* window {nullptr};
+        GLFWwindow* Window {nullptr};
         
     public:
         void Initialize();
