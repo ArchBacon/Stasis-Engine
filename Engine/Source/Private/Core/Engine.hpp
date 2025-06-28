@@ -1,5 +1,8 @@
 ﻿#pragma once
-#include <chrono>
+
+#include "Core/Logger.hpp"
+
+DECLARE_LOG_CATEGORY(LogEngine)
 
 namespace Stasis
 {

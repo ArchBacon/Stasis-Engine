@@ -2,11 +2,13 @@
 #include <chrono>
 #include <iostream>
 
+DEFINE_LOG_CATEGORY(LogEngine);
+
 Stasis::Engine Engine;
 
 void Stasis::Engine::Initialize()
 {
-    std::cout << "Starting Engine...\n";
+    LogEngine->Trace("Initializing Engine...");
 }
 
 void Stasis::Engine::Run()
@@ -22,13 +24,13 @@ void Stasis::Engine::Run()
         const float FrameTime = Elapsed / 1000.0f; // time in milliseconds
         PreviousTime = CurrentTime;
 
-        // Log frame info every 60 frames
         FrameCount++;
-        std::cout << "Frame: " << FrameTime << "ms\n";
+        LogEngine->Trace("FPS: {:.1f} ({}ms)", 1000.0f / FrameTime, FrameTime);
     }
 }
 
 void Stasis::Engine::Shutdown()
 {
     std::cout << "Shutting down...\n";
+    LogEngine->Trace("Shutting Down Engine...");
 }

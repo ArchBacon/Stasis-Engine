@@ -2,9 +2,14 @@ workspace "Stasis"
     architecture "x86_64"
     configurations { "Debug", "Development", "Shipping" }
     startproject "Engine"
+    buildoptions { "/utf-8" }
 
     -- Output directories
     outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+
+group "Dependencies"
+    include "Engine/ThirdParty/spdlog"
+group ""
 
 project "Engine"
     location "Engine"
@@ -24,6 +29,11 @@ project "Engine"
 
     includedirs {
         "%{prj.name}/Source/Public/",
+        "%{prj.name}/Thirdparty/*/include",
+    }
+
+    links {
+        "spdlog",
     }
 
     filter "configurations:Debug"
