@@ -9,6 +9,7 @@ workspace "Stasis"
 
 group "Dependencies"
     include "Engine/ThirdParty/spdlog"
+    include "Engine/ThirdParty/GLFW"
 group ""
 
 project "Engine"
@@ -32,8 +33,13 @@ project "Engine"
         "%{prj.name}/Thirdparty/*/include",
     }
 
+    libdirs {
+        "%{prj.name}/Thirdparty/*/bin",
+    }
+
     links {
         "spdlog",
+        "GLFW"
     }
 
     filter "configurations:Debug"
