@@ -9,5 +9,5 @@
 .idea/
 
 # Binary files
-**/Binaries/
-**/Intermediate/
+/Binaries/
+/Intermediate/
