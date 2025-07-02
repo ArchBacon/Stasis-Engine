@@ -18,7 +18,7 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 
-#include "Stasis.h"
+#include "Stasis.hpp"
 
 #define VK_CHECK(x)                                                     \
     do {                                                                \

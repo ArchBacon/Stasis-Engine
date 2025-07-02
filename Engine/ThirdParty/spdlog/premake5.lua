@@ -3,8 +3,8 @@
     language "C++"
     cppdialect "C++11"
 
-    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/%{prj.name}")
-    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/%{prj.name}")
+    targetdir ("%{wks.location}Binaries/" .. outputdir .. "/Engine")
+    objdir ("%{wks.location}Intermediate/" .. outputdir .. "/Engine")
     
     files {
         "include/spdlog/**.h",

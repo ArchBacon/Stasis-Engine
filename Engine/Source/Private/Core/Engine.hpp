@@ -1,7 +1,8 @@
 ﻿#pragma once
 
-#include <vulkan/vulkan.h>
-#include "GLFW/glfw3.h"
+#include "Core/Types.hpp"
+
+struct SDL_Window;
 
 namespace Stasis
 {
@@ -9,11 +10,11 @@ namespace Stasis
     {
         bool IsInitialized {false};
         bool StopRendering {false};
-        bool StopEngine {false};
+        bool IsRunning {true};
         unsigned int FrameNumber {0};
-        VkExtent2D WindowExtent {720, 405};
+        int2 WindowExtent {720, 405};
         
-        GLFWwindow* Window {nullptr};
+        SDL_Window* Window {nullptr};
         
     public:
         void Initialize();

@@ -1,6 +1,11 @@
 ﻿#include "Engine.hpp"
+
 #include <chrono>
-#include "Stasis.h"
+#include <iostream>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+
+#include "Stasis.hpp"
 
 Stasis::Engine Engine;
 
@@ -8,35 +13,12 @@ void Stasis::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
-    /* Initialize the library */
-    if (!glfwInit())
-    {
-        LogEngine->Error("Failed to initialize GLFW.");
-        return;
-    }
+    SDL_Init(SDL_INIT_VIDEO);
 
-    /* Create a windowed mode window and its OpenGL context */
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    Window = glfwCreateWindow(720, 405, "Stasis Engine", nullptr, nullptr);
-    if (!Window)
-    {
-        glfwTerminate();
-        LogEngine->Error("Failed to create GLFW window.");
-        return;
-    }
-
-    /* Make the window's context current */
-    glfwMakeContextCurrent(Window);
-    
+    const SDL_WindowFlags WindowFlags = SDL_WINDOW_VULKAN;
+    Window = SDL_CreateWindow("Stasis Engine", WindowExtent.x, WindowExtent.y, WindowFlags);
 
     IsInitialized = true;
-}
-
-void Stasis::Engine::Shutdown()
-{
-    LogEngine->Trace("Shutting Down Engine...");
-
-    glfwTerminate();
 }
 
 void Stasis::Engine::Run()
@@ -45,17 +27,36 @@ void Stasis::Engine::Run()
     if (!IsInitialized) return;
     
     auto PreviousTime = std::chrono::high_resolution_clock::now();
-    while (!glfwWindowShouldClose(Window) || StopEngine)
+    SDL_Event Event;
+    
+    while (IsRunning)
     {
         const auto CurrentTime = std::chrono::high_resolution_clock::now();
         const float Elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(CurrentTime - PreviousTime).count());
         const float DeltaTime = Elapsed / 1000000.0f; // time in seconds
         const float FrameTime = Elapsed / 1000.0f; // time in milliseconds
         PreviousTime = CurrentTime;
-        
-        /* Poll for and process events */
-        glfwPollEvents();
 
+        LogEngine->Trace("Engine::Run {}s", DeltaTime);
+        while (SDL_PollEvent(&Event))
+        {
+            // Close the window when user ALT-F4s or closes the window
+            if (Event.type == SDL_EVENT_QUIT)
+            {
+                IsRunning = false;
+            }
+
+            // Pause rendering when the window is minimized or loses focus
+            if (Event.type == SDL_EVENT_WINDOW_MINIMIZED || Event.type == SDL_EVENT_WINDOW_FOCUS_LOST)
+            {
+                StopRendering = true;
+            }
+            if (Event.type == SDL_EVENT_WINDOW_RESTORED || Event.type == SDL_EVENT_WINDOW_FOCUS_GAINED)
+            {
+                StopRendering = false;
+            }
+        }
+        
         // Do not draw if we are minimized
         if (StopRendering)
         {
@@ -74,4 +75,9 @@ void Stasis::Engine::Draw()
     FrameNumber++;
 }
 
+void Stasis::Engine::Shutdown()
+{
+    LogEngine->Trace("Shutting Down Engine...");
 
+    SDL_DestroyWindow(Window);
+}

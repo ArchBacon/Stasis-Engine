@@ -9,7 +9,6 @@ workspace "Stasis"
 
 group "Dependencies"
     include "Engine/ThirdParty/spdlog"
-    include "Engine/ThirdParty/GLFW"
     include "Engine/ThirdParty/GLM"
 group ""
 
@@ -21,8 +20,8 @@ project "Engine"
     cppdialect "C++20"
 
     warnings "High"
-    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/%{prj.name}")
-    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/%{prj.name}")
+    targetdir ("Binaries/" .. outputdir .. "/%{prj.name}")
+    objdir ("Intermediate/" .. outputdir .. "/%{prj.name}")
 
     files {
         "%{prj.name}/Source/**",
@@ -33,36 +32,43 @@ project "Engine"
     includedirs {
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
-        "%{prj.name}/Thirdparty/*/include",
-        "%{prj.name}/Thirdparty/*",
         "$(VULKAN_SDK)/include/",
+        "%{prj.name}/Thirdparty/glm/include",
+        "%{prj.name}/Thirdparty/SDL/include",
+        "%{prj.name}/Thirdparty/spdlog/include",
+        "%{prj.name}/Thirdparty/vkbootstrap",
+        "%{prj.name}/Thirdparty/vma",
     }
 
     libdirs {
         "$(VULKAN_SDK)/Lib/",
-        "%{prj.name}/Thirdparty/*/bin",
+        "%{prj.name}/Thirdparty/SDL/lib",
     }
 
     links {
         "vulkan-1",
         "spdlog",
-        "GLFW",
         "GLM",
+        "SDL3.lib",
+    }
+
+    postbuildcommands {
+        "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}"
     }
 
     filter "configurations:Debug"
-        defines { "DEBUG" }
+        defines { "DEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
         runtime "Debug"
         symbols "On"
 
     filter "configurations:Development"
-        defines { "DEVELOPMENT" }
+        defines { "DEVELOPMENT", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
         runtime "Release"
         symbols "On"
         optimize "Debug"
 
     filter "configurations:Shipping"
-        defines { "SHIPPING", "NDEBUG" }
+        defines { "SHIPPING", "NDEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
         runtime "Release"
         symbols "Off"
         optimize "Full"
