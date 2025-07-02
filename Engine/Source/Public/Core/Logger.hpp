@@ -74,9 +74,3 @@ void Logger::Error(const std::string& Format, TArgs&&... Args)
 #endif
 }
 }
-
-#define DECLARE_LOG_CATEGORY(CategoryName) \
-    extern std::unique_ptr<Stasis::Logger> (CategoryName);
-
-#define DEFINE_LOG_CATEGORY(CategoryName) \
-    std::unique_ptr<Stasis::Logger> CategoryName = std::make_unique<Stasis::Logger>(#CategoryName)

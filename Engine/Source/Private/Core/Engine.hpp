@@ -1,20 +1,24 @@
 ﻿#pragma once
 
-#include "Core/Logger.hpp"
+#include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
-
-DECLARE_LOG_CATEGORY(LogEngine)
 
 namespace Stasis
 {
     class Engine
     {
-        bool IsRunning {true};
+        bool IsInitialized {false};
+        bool StopRendering {false};
+        bool StopEngine {false};
+        unsigned int FrameNumber {0};
+        VkExtent2D WindowExtent {720, 405};
+        
         GLFWwindow* Window {nullptr};
         
     public:
         void Initialize();
         void Run();
+        void Draw();
         void Shutdown();
     };
 }

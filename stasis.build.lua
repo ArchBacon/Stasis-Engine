@@ -10,6 +10,7 @@ workspace "Stasis"
 group "Dependencies"
     include "Engine/ThirdParty/spdlog"
     include "Engine/ThirdParty/GLFW"
+    include "Engine/ThirdParty/GLM"
 group ""
 
 project "Engine"
@@ -26,20 +27,27 @@ project "Engine"
     files {
         "%{prj.name}/Source/**",
         "%{prj.name}/Content/**",
+        "%{prj.name}/ThirdParty/vkbootstrap/VkBootstrap.cpp",
     }
 
     includedirs {
         "%{prj.name}/Source/Public/",
+        "%{prj.name}/Source/Private/",
         "%{prj.name}/Thirdparty/*/include",
+        "%{prj.name}/Thirdparty/*",
+        "$(VULKAN_SDK)/include/",
     }
 
     libdirs {
+        "$(VULKAN_SDK)/Lib/",
         "%{prj.name}/Thirdparty/*/bin",
     }
 
     links {
+        "vulkan-1",
         "spdlog",
-        "GLFW"
+        "GLFW",
+        "GLM",
     }
 
     filter "configurations:Debug"

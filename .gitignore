@@ -9,7 +9,7 @@
 .idea/
 
 # Binary files
-**/binaries/
-
-# Compiled Source files
-**/intermediate/
+**/Binaries/
+**/Intermediate/
+Engine/ThirdParty/*/bin
+Engine/ThirdParty/*/obj
