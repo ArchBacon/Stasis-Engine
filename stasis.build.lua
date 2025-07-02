@@ -53,6 +53,7 @@ project "Engine"
     }
 
     postbuildcommands {
+        -- Copy SDL3.dll to engine executable location
         "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}"
     }
 
