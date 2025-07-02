@@ -2,6 +2,9 @@ project "GLFW"
     kind "StaticLib"
     language "C"
     staticruntime "On"
+
+    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/%{prj.name}")
+    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/%{prj.name}")
     
     files {
         "include/GLFW/*.h",

@@ -11,5 +11,3 @@
 # Binary files
 **/Binaries/
 **/Intermediate/
-Engine/ThirdParty/*/bin
-Engine/ThirdParty/*/obj

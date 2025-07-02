@@ -2,6 +2,9 @@
     kind "None"  -- Header-only
     language "C++"
     cppdialect "C++11"
+
+    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/%{prj.name}")
+    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/%{prj.name}")
     
     files {
         "include/spdlog/**.h",

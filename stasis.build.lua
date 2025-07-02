@@ -21,8 +21,8 @@ project "Engine"
     cppdialect "C++20"
 
     warnings "High"
-    targetdir ("Binaries/" .. outputdir .. "/%{prj.name}")
-    objdir ("Intermediate/" .. outputdir .. "/%{prj.name}")
+    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/%{prj.name}")
+    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/%{prj.name}")
 
     files {
         "%{prj.name}/Source/**",
