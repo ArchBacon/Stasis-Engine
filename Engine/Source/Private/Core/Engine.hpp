@@ -59,6 +59,7 @@ namespace Stasis
         std::vector<VkImageView> SwapChainImageViews {};
         VkExtent2D SwapChainExtent {};
 
+        VmaAllocator Allocator {};
         DeletionQueue MainDeletionQueue {};
         
         bool IsInitialized {false};

@@ -236,6 +236,19 @@ void Stasis::Engine::InitVulkan()
     // Use vkbootstrap to get a graphics queue
     GraphicsQueue = VkbDevice.get_queue(vkb::QueueType::graphics).value();
     GraphicsQueueFamily = VkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+    // IInitialize the memory allocator
+    VmaAllocatorCreateInfo AllocatorInfo {};
+    AllocatorInfo.physicalDevice = SelectedGPU;
+    AllocatorInfo.device = Device;
+    AllocatorInfo.instance = Instance;
+    AllocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&AllocatorInfo, &Allocator);
+
+    MainDeletionQueue.PushFunction([&]()
+    {
+        vmaDestroyAllocator(Allocator);        
+    });
 }
 
 void Stasis::Engine::InitSwapChain()
