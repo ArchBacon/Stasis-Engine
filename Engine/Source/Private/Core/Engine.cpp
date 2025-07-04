@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include "Rendering/vk_initializers.h"
+#include "Rendering/vk_images.h"
 #include "Stasis.hpp"
 
 Stasis::Engine Engine;
@@ -82,6 +83,67 @@ void Stasis::Engine::Run()
 
 void Stasis::Engine::Draw()
 {
+    // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
+    VK_CHECK(vkWaitForFences(Device, 1, &GetCurrentFrame().RenderFence, true, 1000000000));
+    VK_CHECK(vkResetFences(Device, 1, &GetCurrentFrame().RenderFence));
+
+    //request image from the swapchain
+    uint32_t SwapchainImageIndex;
+    VK_CHECK(vkAcquireNextImageKHR(Device, SwapChain, 1000000000, GetCurrentFrame().SwapchainSemaphore, nullptr, &SwapchainImageIndex));
+
+    VkCommandBuffer CommandBuffer = GetCurrentFrame().CommandBuffer;
+
+    // Now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
+    VK_CHECK(vkResetCommandBuffer(CommandBuffer, 0));
+    // Begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that.
+    VkCommandBufferBeginInfo CommandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    // Start the command buffer recording.
+    VK_CHECK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
+
+    // Make the swapchain image into writable mode before rendering
+    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    
+    // Make a clear-color from the frame number. This will flash with a 120-frame period.
+    VkClearColorValue ClearValue {};
+    float Flash = std::abs(std::sin(FrameNumber / 1440.f));
+    ClearValue = {{0.0f, 0.0f, Flash, 1.0f}};
+    VkImageSubresourceRange ClearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Clear image
+    vkCmdClearColorImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &ClearValue, 1, &ClearRange);
+    // Make the swapchain image into presentable mode
+    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    // Finalize the command buffer (we can no longer add commands, but it can now be executed)
+    VK_CHECK(vkEndCommandBuffer(CommandBuffer));
+
+    // Prepare the submission to the queue
+    // We want to wait on the RenderSemaphore as that semaphore is signaled when the swapchain is ready
+    // We will signal the RenderSemaphore to signal that rendering has finished
+    VkCommandBufferSubmitInfo CommandInfo = vkinit::CommandBufferSubmitInfo(CommandBuffer);
+    VkSemaphoreSubmitInfo WaitInfo = vkinit::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, GetCurrentFrame().SwapchainSemaphore);
+    VkSemaphoreSubmitInfo SignalInfo = vkinit::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT_KHR, GetCurrentFrame().RenderSemaphore);
+    VkSubmitInfo2 Submit = vkinit::SubmitInfo(&CommandInfo, &SignalInfo, &WaitInfo);
+
+    // Submit the command buffer to the queue and execute it.
+    // RenderFence will now block the graphics commands finish execution
+    VK_CHECK(vkQueueSubmit2(GraphicsQueue, 1, &Submit, GetCurrentFrame().RenderFence));
+    
+    // This will put the image we just rendered to into the visible window.
+    // We want to wait on the RenderSemaphore for that as it's necessary that drawing commands
+    // have finished before the image is displayed to the user.
+    VkPresentInfoKHR PresentInfo {};
+    PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    PresentInfo.pNext = nullptr;
+    PresentInfo.pSwapchains = &SwapChain;
+    PresentInfo.swapchainCount = 1;
+
+    PresentInfo.pWaitSemaphores = &GetCurrentFrame().RenderSemaphore;
+    PresentInfo.waitSemaphoreCount = 1;
+    
+    PresentInfo.pImageIndices = &SwapchainImageIndex;
+
+    VK_CHECK(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
+    
     FrameNumber++;
 }
 
@@ -91,6 +153,17 @@ void Stasis::Engine::Shutdown()
 
     if (IsInitialized)
     {
+        // Make sure the GPU has stopped doing its things
+        vkDeviceWaitIdle(Device);
+        for (auto& Frame : Frames)
+        {
+            vkDestroyCommandPool(Device, Frame.CommandPool, nullptr);
+
+            vkDestroyFence(Device, Frame.RenderFence, nullptr);
+            vkDestroySemaphore(Device, Frame.RenderSemaphore, nullptr);
+            vkDestroySemaphore(Device, Frame.SwapchainSemaphore, nullptr);
+        }
+        
         DestroySwapChain();
         vkDestroySurfaceKHR(Instance, Surface, nullptr);
         vkDestroyDevice(Device, nullptr);
@@ -148,6 +221,10 @@ void Stasis::Engine::InitVulkan()
     // Get the VkDevice handle used in the rest of the application
     Device = VkbDevice.device;
     SelectedGPU = PhysicalDevice.physical_device;
+
+    // Use vkbootstrap to get a graphics queue
+    GraphicsQueue = VkbDevice.get_queue(vkb::QueueType::graphics).value();
+    GraphicsQueueFamily = VkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
 
 void Stasis::Engine::InitSwapChain()
@@ -157,13 +234,44 @@ void Stasis::Engine::InitSwapChain()
 
 void Stasis::Engine::InitCommands()
 {
+    // Create a command pool for commands submitted to the graphics queue.
+    // We also want the pool to allow for resetting of individua; command buffers
+    VkCommandPoolCreateInfo CommandPoolInfo = {};
+    CommandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    CommandPoolInfo.pNext = nullptr;
+    CommandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    CommandPoolInfo.queueFamilyIndex = GraphicsQueueFamily;
+
+    for (auto& Frame : Frames)
+    {
+        VK_CHECK(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &Frame.CommandPool));
+
+        // Allocate the default command buffer that we will use for rendering
+        VkCommandBufferAllocateInfo CommandAllocateInfo = vkinit::CommandBufferAllocateInfo(Frame.CommandPool, 1);
+
+        VK_CHECK(vkAllocateCommandBuffers(Device, &CommandAllocateInfo, &Frame.CommandBuffer));
+    }
 }
 
 void Stasis::Engine::InitSyncStructures()
 {
+    // Create synchronization structures
+    // One fence to control when the GPU has finished rendering the frame
+    // and 2 semaphores to synchronize rendering with the swapchain.
+    // We want the fence to start signaled so we can wait for it on the first frame
+    const VkFenceCreateInfo FenceInfo = vkinit::FenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
+    const VkSemaphoreCreateInfo SemaphoreInfo = vkinit::SemaphoreCreateInfo();
+
+    for (auto& Frame : Frames)
+    {
+        VK_CHECK(vkCreateFence(Device, &FenceInfo, nullptr, &Frame.RenderFence));
+
+        VK_CHECK(vkCreateSemaphore(Device, &SemaphoreInfo, nullptr, &Frame.SwapchainSemaphore));
+        VK_CHECK(vkCreateSemaphore(Device, &SemaphoreInfo, nullptr, &Frame.RenderSemaphore));
+    }
 }
 
-void Stasis::Engine::CreateSwapChain(uint32_t Width, uint32_t Height)
+void Stasis::Engine::CreateSwapChain(const uint32_t Width, const uint32_t Height)
 {
     vkb::SwapchainBuilder SwapchainBuilder {SelectedGPU, Device, Surface};
     SwapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -186,7 +294,7 @@ void Stasis::Engine::DestroySwapChain()
     vkDestroySwapchainKHR(Device, SwapChain, nullptr);
 
     // Destroy swapchain resources
-    for (auto SwapChainImageView : SwapChainImageViews)
+    for (const auto SwapChainImageView : SwapChainImageViews)
     {
         vkDestroyImageView(Device, SwapChainImageView, nullptr);
     } 

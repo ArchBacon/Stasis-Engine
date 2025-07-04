@@ -8,6 +8,17 @@ struct SDL_Window;
 
 namespace Stasis
 {
+    struct FrameData
+    {
+        VkCommandPool CommandPool {};
+        VkCommandBuffer CommandBuffer {};
+        VkSemaphore SwapchainSemaphore {};
+        VkSemaphore RenderSemaphore {};
+        VkFence RenderFence {};
+    };
+
+    constexpr unsigned int FRAME_OVERLAP = 2;
+    
     class Engine
     {
         /** Vulkan */
@@ -31,6 +42,14 @@ namespace Stasis
         int2 WindowExtent {1024, 576};
 
         SDL_Window* Window {nullptr};
+        
+    /** Vulkan public members */
+    public:
+        FrameData Frames[FRAME_OVERLAP];
+        FrameData& GetCurrentFrame() { return Frames[FrameNumber % FRAME_OVERLAP]; }
+
+        VkQueue GraphicsQueue {};
+        uint32_t GraphicsQueueFamily {};
         
     public:
         void Initialize();
