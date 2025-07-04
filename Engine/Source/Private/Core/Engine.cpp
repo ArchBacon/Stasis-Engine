@@ -85,6 +85,9 @@ void Stasis::Engine::Draw()
 {
     // Wait until the gpu has finished rendering the last frame. Timeout of 1 second
     VK_CHECK(vkWaitForFences(Device, 1, &GetCurrentFrame().RenderFence, true, 1000000000));
+
+    GetCurrentFrame().DeletionQueue.Flush();
+    
     VK_CHECK(vkResetFences(Device, 1, &GetCurrentFrame().RenderFence));
 
     //request image from the swapchain
@@ -155,14 +158,22 @@ void Stasis::Engine::Shutdown()
     {
         // Make sure the GPU has stopped doing its things
         vkDeviceWaitIdle(Device);
+
+        // Free per-frame structures and deletion queue
         for (auto& Frame : Frames)
         {
             vkDestroyCommandPool(Device, Frame.CommandPool, nullptr);
 
+            // Destroy sync objects
             vkDestroyFence(Device, Frame.RenderFence, nullptr);
             vkDestroySemaphore(Device, Frame.RenderSemaphore, nullptr);
             vkDestroySemaphore(Device, Frame.SwapchainSemaphore, nullptr);
+
+            Frame.DeletionQueue.Flush();
         }
+
+        // Flush the global deletion queue
+        MainDeletionQueue.Flush();
         
         DestroySwapChain();
         vkDestroySurfaceKHR(Instance, Surface, nullptr);

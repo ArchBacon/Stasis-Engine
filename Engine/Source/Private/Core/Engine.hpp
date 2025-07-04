@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <ranges>
+
 #include "Core/Types.hpp"
 #include "Rendering/vk_types.h"
 #include "VkBootstrap.h"
@@ -8,6 +10,27 @@ struct SDL_Window;
 
 namespace Stasis
 {
+    struct DeletionQueue
+    {
+        std::deque<std::function<void()>> Deletors {};
+
+        void PushFunction(std::function<void()>&& Function)
+        {
+            Deletors.push_back(Function);
+        }
+
+        void Flush()
+        {
+            // Reverse iterate the deletion queue to execute all the functions
+            for (auto& Function : std::ranges::reverse_view(Deletors))
+            {
+                Function();
+            }
+
+            Deletors.clear();
+        }
+    };
+    
     struct FrameData
     {
         VkCommandPool CommandPool {};
@@ -15,6 +38,7 @@ namespace Stasis
         VkSemaphore SwapchainSemaphore {};
         VkSemaphore RenderSemaphore {};
         VkFence RenderFence {};
+        DeletionQueue DeletionQueue {};
     };
 
     constexpr unsigned int FRAME_OVERLAP = 2;
@@ -34,6 +58,8 @@ namespace Stasis
         std::vector<VkImage> SwapChainImages {};
         std::vector<VkImageView> SwapChainImageViews {};
         VkExtent2D SwapChainExtent {};
+
+        DeletionQueue MainDeletionQueue {};
         
         bool IsInitialized {false};
         bool StopRendering {false};
