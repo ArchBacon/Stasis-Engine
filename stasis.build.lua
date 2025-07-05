@@ -24,8 +24,19 @@ project "Engine"
     objdir ("Intermediate/" .. outputdir .. "/%{prj.name}")
 
     files {
-        "%{prj.name}/Source/**",
+        -- Everything in Content
         "%{prj.name}/Content/**",
+        
+        -- Uncompiled shader files
+        "%{prj.name}/Shaders/**.comp",
+        "%{prj.name}/Shaders/**.vert",
+        "%{prj.name}/Shaders/**.frag",
+        "%{prj.name}/Shaders/**.glsl",
+        
+        -- Everything in Source
+        "%{prj.name}/Source/**",
+        
+        -- Include third-party code
         "%{prj.name}/ThirdParty/vkbootstrap/VkBootstrap.cpp",
     }
 
@@ -50,6 +61,11 @@ project "Engine"
         "spdlog",
         "GLM",
         "SDL3.lib",
+    }
+
+    prebuildcommands {
+        -- Compile shader files before build starts
+        "%{wks.location}Engine/Shaders/compile_shaders.bat"
     }
 
     postbuildcommands {

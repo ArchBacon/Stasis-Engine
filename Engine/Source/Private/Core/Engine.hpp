@@ -3,6 +3,7 @@
 #include <ranges>
 #include "Rendering/vk_types.h"
 #include "VkBootstrap.h"
+#include "Rendering/vk_descriptors.h"
 
 struct SDL_Window;
 
@@ -43,7 +44,7 @@ namespace Stasis
     
     class Engine
     {
-        /** Vulkan */
+    // ---------------- VULKAN START ---------------- 
         VkInstance Instance {}; // Vulkan library handle
         VkDebugUtilsMessengerEXT DebugMessenger {}; // Vulkan debug output handle
         VkPhysicalDevice SelectedGPU {}; // GPU selected as the default device
@@ -61,7 +62,11 @@ namespace Stasis
         AllocatedImage DrawImage {};
         VkExtent2D DrawExtent {};
 
+        // Allocators
         VmaAllocator Allocator {};
+        
+    // ---------------- VULKAN END ----------------
+        
         DeletionQueue MainDeletionQueue {};
         
         bool IsInitialized {false};
@@ -72,13 +77,21 @@ namespace Stasis
 
         SDL_Window* Window {nullptr};
         
-    /** Vulkan public members */
+    // ---------------- VULKAN START ----------------
     public:
         FrameData Frames[FRAME_OVERLAP];
         FrameData& GetCurrentFrame() { return Frames[FrameNumber % FRAME_OVERLAP]; }
 
         VkQueue GraphicsQueue {};
         uint32_t GraphicsQueueFamily {};
+
+        DescriptorAllocator GlobalDescriptorAllocator {};
+        VkDescriptorSet DrawImageDescriptors {};
+        VkDescriptorSetLayout DrawImageDescriptorLayout {};
+
+        VkPipeline GradientPipeline {};
+        VkPipelineLayout GradientPipelineLayout {};
+    // ---------------- VULKAN END ----------------
         
     public:
         void Initialize();
@@ -88,15 +101,20 @@ namespace Stasis
         void Shutdown();
 
     private:
-        /** Vulkan */
+    // ---------------- VULKAN START ----------------
         void InitVulkan();
         void InitSwapChain();
         void InitCommands();
         void InitSyncStructures();
-
-        /** Vulkan Swapchain */
+        
         void CreateSwapChain(uint32_t Width, uint32_t Height);
         void DestroySwapChain();
+
+        void InitDescriptors();
+
+        void InitPipelines();
+        void InitBackgroundPipelines();
+    // ---------------- VULKAN END ----------------
     };
 }
 

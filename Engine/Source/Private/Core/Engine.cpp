@@ -7,8 +7,12 @@
 #include "Rendering/vk_images.h"
 #include "Stasis.hpp"
 
+#pragma warning(push, 0)  // Disable all warnings // TODO: put into dependency and disable warnings there
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+#pragma warning(pop)
+
+#include "Rendering/vk_pipelines.h"
 
 Stasis::Engine Engine;
 
@@ -32,6 +36,8 @@ void Stasis::Engine::Initialize()
     InitSwapChain();
     InitCommands();
     InitSyncStructures();
+    InitDescriptors();
+    InitPipelines();
     
     IsInitialized = true;
 }
@@ -173,7 +179,16 @@ void Stasis::Engine::DrawBackground(
     VkImageSubresourceRange ClearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
 
     // Clear image
-    vkCmdClearColorImage(CommandBuffer, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &ClearValue, 1, &ClearRange);
+    // vkCmdClearColorImage(CommandBuffer, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &ClearValue, 1, &ClearRange);
+
+    // Bind the gradient compute pipeline
+    vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, GradientPipeline);
+
+    // Bind the descriptor set containing the draw image for the compute pipeline
+    vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, GradientPipelineLayout, 0, 1, &DrawImageDescriptors, 0, nullptr);
+
+    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    vkCmdDispatch(CommandBuffer, std::ceil(DrawExtent.width / 16.0), std::ceil(DrawExtent.height / 16.0), 1);
 }
 
 void Stasis::Engine::Shutdown()
@@ -359,8 +374,10 @@ void Stasis::Engine::InitSyncStructures()
     }
 }
 
-void Stasis::Engine::CreateSwapChain(const uint32_t Width, const uint32_t Height)
-{
+void Stasis::Engine::CreateSwapChain(
+    const uint32_t Width,
+    const uint32_t Height
+) {
     vkb::SwapchainBuilder SwapchainBuilder {SelectedGPU, Device, Surface};
     SwapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
     vkb::Swapchain VkbSwapchain = SwapchainBuilder
@@ -386,4 +403,93 @@ void Stasis::Engine::DestroySwapChain()
     {
         vkDestroyImageView(Device, SwapChainImageView, nullptr);
     } 
+}
+
+void Stasis::Engine::InitDescriptors()
+{
+    // Create a descriptor pool that will hold 10 sets with 1 image each
+    std::vector<DescriptorAllocator::PoolSizeRatio> Sizes =
+    {
+        { .Type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .Ratio = 1}
+    };
+
+    GlobalDescriptorAllocator.InitPool(Device, 10, Sizes);
+
+    // Make the descriptor set layout for our compute draw
+    {
+        DescriptorLayoutBuilder Builder {};
+        Builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        DrawImageDescriptorLayout = Builder.Build(Device, VK_SHADER_STAGE_COMPUTE_BIT);
+
+        // Allocate a descriptor set for our draw image
+        DrawImageDescriptors = GlobalDescriptorAllocator.Allocate(Device, DrawImageDescriptorLayout);
+
+        VkDescriptorImageInfo ImageInfo {};
+        ImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        ImageInfo.imageView = DrawImage.ImageView;
+
+        VkWriteDescriptorSet DrawImageWrite {};
+        DrawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        DrawImageWrite.pNext = nullptr;
+
+        DrawImageWrite.dstBinding = 0;
+        DrawImageWrite.dstSet = DrawImageDescriptors;
+        DrawImageWrite.descriptorCount = 1;
+        DrawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        DrawImageWrite.pImageInfo = &ImageInfo;
+
+        vkUpdateDescriptorSets(Device, 1, &DrawImageWrite, 0, nullptr);
+
+        // Make sure both the descriptor allocator and the new layout get cleaned up properly
+        MainDeletionQueue.PushFunction([&]()
+        {
+            GlobalDescriptorAllocator.DestroyPool(Device);
+            vkDestroyDescriptorSetLayout(Device, DrawImageDescriptorLayout, nullptr);
+        });
+    }
+}
+
+void Stasis::Engine::InitPipelines()
+{
+    InitBackgroundPipelines();
+}
+
+void Stasis::Engine::InitBackgroundPipelines()
+{
+    VkPipelineLayoutCreateInfo ComputeLayout {};
+    ComputeLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    ComputeLayout.pNext = nullptr;
+    ComputeLayout.pSetLayouts = &DrawImageDescriptorLayout;
+    ComputeLayout.setLayoutCount = 1;
+
+    VK_CHECK(vkCreatePipelineLayout(Device, &ComputeLayout, nullptr, &GradientPipelineLayout));
+
+    // Layout code
+    VkShaderModule ComputeDrawShader {};
+    if (!vkutil::LoadShaderModule("Shaders/gradient.comp.spv", Device, &ComputeDrawShader))
+    {
+        LogRenderer->Error("Error when building the compute shader.");
+    }
+
+    VkPipelineShaderStageCreateInfo StageInfo {};
+    StageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    StageInfo.pNext = nullptr;
+    StageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    StageInfo.module = ComputeDrawShader;
+    StageInfo.pName = "main";
+
+    VkComputePipelineCreateInfo ComputePipelineCreateInfo {};
+    ComputePipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    ComputePipelineCreateInfo.pNext = nullptr;
+    ComputePipelineCreateInfo.layout = GradientPipelineLayout;
+    ComputePipelineCreateInfo.stage = StageInfo;
+
+    VK_CHECK(vkCreateComputePipelines(Device, VK_NULL_HANDLE, 1, &ComputePipelineCreateInfo, nullptr, &GradientPipeline));
+
+    vkDestroyShaderModule(Device, ComputeDrawShader, nullptr);
+    MainDeletionQueue.PushFunction([&]()
+    {
+        vkDestroyPipelineLayout(Device, GradientPipelineLayout, nullptr);
+        vkDestroyPipeline(Device, GradientPipeline, nullptr);
+    });   
 }
