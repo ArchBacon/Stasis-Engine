@@ -1,8 +1,6 @@
 ﻿#pragma once
 
 #include <ranges>
-
-#include "Core/Types.hpp"
 #include "Rendering/vk_types.h"
 #include "VkBootstrap.h"
 
@@ -59,6 +57,10 @@ namespace Stasis
         std::vector<VkImageView> SwapChainImageViews {};
         VkExtent2D SwapChainExtent {};
 
+        // Draw resources
+        AllocatedImage DrawImage {};
+        VkExtent2D DrawExtent {};
+
         VmaAllocator Allocator {};
         DeletionQueue MainDeletionQueue {};
         
@@ -66,7 +68,7 @@ namespace Stasis
         bool StopRendering {false};
         bool IsRunning {true};
         unsigned int FrameNumber {0};
-        int2 WindowExtent {1024, 576};
+        VkExtent2D WindowExtent {1024, 576};
 
         SDL_Window* Window {nullptr};
         
@@ -82,6 +84,7 @@ namespace Stasis
         void Initialize();
         void Run();
         void Draw();
+        void DrawBackground(VkCommandBuffer CommandBuffer);
         void Shutdown();
 
     private:

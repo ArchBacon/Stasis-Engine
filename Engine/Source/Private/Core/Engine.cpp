@@ -7,6 +7,9 @@
 #include "Rendering/vk_images.h"
 #include "Stasis.hpp"
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 Stasis::Engine Engine;
 
 #ifdef NDEBUG
@@ -23,7 +26,7 @@ void Stasis::Engine::Initialize()
     SDL_Init(SDL_INIT_VIDEO);
 
     constexpr SDL_WindowFlags WindowFlags = SDL_WINDOW_VULKAN;
-    Window = SDL_CreateWindow("Stasis Engine", WindowExtent.x, WindowExtent.y, WindowFlags);
+    Window = SDL_CreateWindow("Stasis Engine", WindowExtent.width, WindowExtent.height, WindowFlags);
 
     InitVulkan();
     InitSwapChain();
@@ -98,24 +101,34 @@ void Stasis::Engine::Draw()
 
     // Now that we are sure that the commands finished executing, we can safely reset the command buffer to begin recording again.
     VK_CHECK(vkResetCommandBuffer(CommandBuffer, 0));
+    
     // Begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan know that.
     VkCommandBufferBeginInfo CommandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+    DrawExtent.width = DrawImage.ImageExtent.width;
+    DrawExtent.height = DrawImage.ImageExtent.height;
+    
     // Start the command buffer recording.
     VK_CHECK(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo));
 
-    // Make the swapchain image into writable mode before rendering
-    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
-    
-    // Make a clear-color from the frame number. This will flash with a 120-frame period.
-    VkClearColorValue ClearValue {};
-    float Flash = std::abs(std::sin(FrameNumber / 1440.f));
-    ClearValue = {{0.0f, 0.0f, Flash, 1.0f}};
-    VkImageSubresourceRange ClearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    // Transition our main draw image into a general layout so we can write into it,
+    // We will overwrite it all, so we don't care about what was the older layout.
+    vkutil::TransitionImage(CommandBuffer, DrawImage.Image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    // Clear image
-    vkCmdClearColorImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &ClearValue, 1, &ClearRange);
-    // Make the swapchain image into presentable mode
-    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    DrawBackground(CommandBuffer);
+
+    // Transition the draw image and the swapchain image into their correct transfer layouts.
+    vkutil::TransitionImage(CommandBuffer, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    // Execute a copy from the draw image into the swapchain
+    vkutil::CopyImageToImage(CommandBuffer, DrawImage.Image, SwapChainImages[SwapchainImageIndex], DrawExtent, SwapChainExtent);
+
+    // Set the swapchain image layout to Present so we can show it on screen.
+    vkutil::TransitionImage(CommandBuffer, SwapChainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
     // Finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(CommandBuffer));
 
@@ -148,6 +161,19 @@ void Stasis::Engine::Draw()
     VK_CHECK(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
     
     FrameNumber++;
+}
+
+void Stasis::Engine::DrawBackground(
+    VkCommandBuffer CommandBuffer
+) {
+    // Make a clear-color from the frame number. This will flash with a 120-frame period.
+    VkClearColorValue ClearValue {};
+    float Flash = std::abs(std::sin(FrameNumber / 1440.f));
+    ClearValue = {{0.0f, 0.0f, Flash, 1.0f}};
+    VkImageSubresourceRange ClearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Clear image
+    vkCmdClearColorImage(CommandBuffer, DrawImage.Image, VK_IMAGE_LAYOUT_GENERAL, &ClearValue, 1, &ClearRange);
 }
 
 void Stasis::Engine::Shutdown()
@@ -253,7 +279,45 @@ void Stasis::Engine::InitVulkan()
 
 void Stasis::Engine::InitSwapChain()
 {
-    CreateSwapChain(WindowExtent.x, WindowExtent.y);
+    CreateSwapChain(WindowExtent.width, WindowExtent.height);
+
+    // Draw image size will match the window
+    const VkExtent3D DrawImageExtent = {
+        WindowExtent.width,
+        WindowExtent.height,
+        1
+    };
+
+    // Hardcoding the draw format to 32-bit float
+    DrawImage.ImageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    DrawImage.ImageExtent = DrawImageExtent;
+
+    VkImageUsageFlags DrawImageUsages {};
+    DrawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    DrawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    DrawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    DrawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo DrawImageInfo = vkinit::ImageCreateInfo(DrawImage.ImageFormat, DrawImageUsages, DrawImageExtent);
+
+    // For the draw image, we want to allocate it from the gpu local memory
+    VmaAllocationCreateInfo DrawImageAllocInfo {};
+    DrawImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    DrawImageAllocInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    // Allocate and create image
+    vmaCreateImage(Allocator, &DrawImageInfo, &DrawImageAllocInfo, &DrawImage.Image, &DrawImage.Allocation, nullptr);
+
+    // Build an image-view for the draw image to use for rendering
+    VkImageViewCreateInfo DrawImageViewInfo = vkinit::ImageviewCreateInfo(DrawImage.ImageFormat, DrawImage.Image, VK_IMAGE_ASPECT_COLOR_BIT);
+    VK_CHECK(vkCreateImageView(Device, &DrawImageViewInfo, nullptr, &DrawImage.ImageView));
+
+    // Add to deletion queues
+    MainDeletionQueue.PushFunction([&]()
+    {
+        vkDestroyImageView(Device, DrawImage.ImageView, nullptr);
+        vmaDestroyImage(Allocator, DrawImage.Image, DrawImage.Allocation);
+    });
 }
 
 void Stasis::Engine::InitCommands()
