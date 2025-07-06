@@ -1,6 +1,7 @@
-project "STB_Image"
+project "stb"
     kind "Utility"  -- Header-only library
     language "C++"
+    staticruntime "on"
 
     targetdir ("%{wks.location}Binaries/" .. outputdir .. "/Engine")
     objdir ("%{wks.location}Intermediate/" .. outputdir .. "/Engine")

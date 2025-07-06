@@ -1,4 +1,4 @@
-project "SimdJSON"
+project "simdjson"
     kind "StaticLib"
     language "C++"
     cppdialect "C++17"

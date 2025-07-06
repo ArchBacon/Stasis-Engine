@@ -11,9 +11,12 @@ group "Dependencies"
     include "Engine/ThirdParty/spdlog"
     include "Engine/ThirdParty/GLM"
     include "Engine/ThirdParty/ImGui"
-    include "Engine/ThirdParty/SimdJSON"
-    include "Engine/ThirdParty/FastGLTF"
-    include "Engine/ThirdParty/STB_Image"
+    include "Engine/ThirdParty/simdjson"
+    include "Engine/ThirdParty/fastgltf"
+    include "Engine/ThirdParty/stb"
+    include "Engine/ThirdParty/vma"
+    include "Engine/ThirdParty/vkbootstrap"
+    include "Engine/ThirdParty/SDL"
 group ""
 
 project "Engine"
@@ -28,20 +31,13 @@ project "Engine"
     objdir ("Intermediate/" .. outputdir .. "/%{prj.name}")
 
     files {
-        -- Everything in Content
         "%{prj.name}/Content/**",
-        
-        -- Uncompiled shader files
-        "%{prj.name}/Shaders/**.comp",
-        "%{prj.name}/Shaders/**.vert",
-        "%{prj.name}/Shaders/**.frag",
-        "%{prj.name}/Shaders/**.glsl",
-        
-        -- Everything in Source
+        "%{prj.name}/Shaders/**",
         "%{prj.name}/Source/**",
-        
-        -- Include third-party code
-        "%{prj.name}/ThirdParty/vkbootstrap/VkBootstrap.cpp",
+    }
+
+    removefiles {
+        "**.bat",
     }
 
     includedirs {
@@ -52,11 +48,11 @@ project "Engine"
         "%{prj.name}/ThirdParty/imgui/include",
         "%{prj.name}/ThirdParty/SDL/include",
         "%{prj.name}/ThirdParty/spdlog/include",
-        "%{prj.name}/ThirdParty/vkbootstrap",
-        "%{prj.name}/ThirdParty/vma",
         "%{prj.name}/ThirdParty/simdjson/include",
         "%{prj.name}/ThirdParty/fastgltf/include",
-        "%{prj.name}/ThirdParty/stb_image",
+        "%{prj.name}/ThirdParty/vkbootstrap",
+        "%{prj.name}/ThirdParty/vma",
+        "%{prj.name}/ThirdParty/stb",
     }
 
     libdirs {
@@ -72,9 +68,11 @@ project "Engine"
         "spdlog",
         "GLM",
         "ImGui",
-        "SimdJSON",
-        "FastGLTF",
-        "STB_Image",
+        "simdjson",
+        "fastgltf",
+        "stb",
+        "vma",
+        "vkbootstrap",
     }
 
     prebuildcommands {
@@ -88,18 +86,18 @@ project "Engine"
     }
 
     filter "configurations:Debug"
-        defines { "DEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
+        defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
 
     filter "configurations:Development"
-        defines { "DEVELOPMENT", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
+        defines { "DEVELOPMENT" }
         runtime "Release"
         symbols "On"
         optimize "Debug"
 
     filter "configurations:Shipping"
-        defines { "SHIPPING", "NDEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
+        defines { "SHIPPING", "NDEBUG" }
         runtime "Release"
         symbols "Off"
         optimize "Full"

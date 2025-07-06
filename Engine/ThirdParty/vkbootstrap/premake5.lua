@@ -1,4 +1,4 @@
-project "fastgltf"
+project "vkbootstrap"
     kind "StaticLib"
     language "C++"
     cppdialect "C++20"
@@ -8,30 +8,21 @@ project "fastgltf"
     objdir ("%{wks.location}Intermediate/" .. outputdir .. "/Engine")
     
     files {
-        "include/**",
-        "src/*",
+        "**",
     }
-
+    
     includedirs {
-        "include",
-    }
-
-    externalincludedirs {
-         "../simdjson/include",  -- for SIMD JSON parsing
-    }
-
-    defines {
-        "FASTGLTF_ENABLE_DOCS=OFF",
-        "FASTGLTF_COMPILE_AS_CPP20=ON",
+        ".",
+        "$(VULKAN_SDK)/include/",
     }
 
     filter "configurations:Debug"
-        defines { "DEBUG", "FASTGLTF_ENABLE_ASSERTS" }
+        defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
     
     filter "configurations:Development"
-        defines { "DEVELOPMENT", "FASTGLTF_ENABLE_ASSERTS" }
+        defines { "DEVELOPMENT" }
         runtime "Release"
         symbols "On"
         optimize "Debug"
@@ -41,4 +32,3 @@ project "fastgltf"
         runtime "Release"
         symbols "Off"
         optimize "Full"
-
