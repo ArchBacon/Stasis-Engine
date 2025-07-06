@@ -11,6 +11,9 @@ group "Dependencies"
     include "Engine/ThirdParty/spdlog"
     include "Engine/ThirdParty/GLM"
     include "Engine/ThirdParty/ImGui"
+    include "Engine/ThirdParty/SimdJSON"
+    include "Engine/ThirdParty/FastGLTF"
+    include "Engine/ThirdParty/STB_Image"
 group ""
 
 project "Engine"
@@ -45,25 +48,33 @@ project "Engine"
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
         "$(VULKAN_SDK)/include/",
-        "%{prj.name}/Thirdparty/glm/include",
-        "%{prj.name}/Thirdparty/imgui/include",
-        "%{prj.name}/Thirdparty/SDL/include",
-        "%{prj.name}/Thirdparty/spdlog/include",
-        "%{prj.name}/Thirdparty/vkbootstrap",
-        "%{prj.name}/Thirdparty/vma",
+        "%{prj.name}/ThirdParty/glm/include",
+        "%{prj.name}/ThirdParty/imgui/include",
+        "%{prj.name}/ThirdParty/SDL/include",
+        "%{prj.name}/ThirdParty/spdlog/include",
+        "%{prj.name}/ThirdParty/vkbootstrap",
+        "%{prj.name}/ThirdParty/vma",
+        "%{prj.name}/ThirdParty/simdjson/include",
+        "%{prj.name}/ThirdParty/fastgltf/include",
+        "%{prj.name}/ThirdParty/stb_image",
     }
 
     libdirs {
         "$(VULKAN_SDK)/Lib/",
-        "%{prj.name}/Thirdparty/SDL/lib",
+        "%{prj.name}/ThirdParty/SDL/lib",
     }
 
     links {
+        -- linked libraries
         "vulkan-1",
+        "SDL3.lib",
+        -- Dependencies
         "spdlog",
         "GLM",
         "ImGui",
-        "SDL3.lib",
+        "SimdJSON",
+        "FastGLTF",
+        "STB_Image",
     }
 
     prebuildcommands {
