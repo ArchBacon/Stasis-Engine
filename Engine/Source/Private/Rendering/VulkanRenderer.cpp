@@ -37,6 +37,14 @@ void Stasis::VulkanRenderer::Initialize()
 
 void Stasis::VulkanRenderer::Shutdown()
 {
+    // Make sure the GPU has stopped doing its thing
+    vkDeviceWaitIdle(device);
+
+    for (const auto& frame : frames)
+    {
+        vkDestroyCommandPool(device, frame.commandPool, nullptr);
+    }
+    
     DestroySwapchain();
 
     vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -104,6 +112,10 @@ void Stasis::VulkanRenderer::InitVulkan()
     // Get the vkDevice handle used in the rest of the Vulkan application
     device = vkbDevice.device;
     selectedGPU = physicalDevice.physical_device;
+
+    // Use vkbootstrap to get a graphics queue
+    graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+    graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 }
 
 void Stasis::VulkanRenderer::InitSwapchain()
@@ -113,14 +125,29 @@ void Stasis::VulkanRenderer::InitSwapchain()
 
 void Stasis::VulkanRenderer::InitCommands()
 {
+    // Create a command pool for commands submitted to the graphics queue.
+    // We also want the pool to allow for resetting of individual command buffers.
+    const VkCommandPoolCreateInfo commandPoolInfo = vkinit::CommandPoolCreateInfo(graphicsQueueFamily, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+
+    for (auto& frame : frames)
+    {
+        VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &frame.commandPool));
+
+        // Allocate the default command buffer that we will use for rendering
+        VkCommandBufferAllocateInfo commandBufferAllocInfo = vkinit::CommandBufferAllocateInfo(frame.commandPool, 1);
+
+        VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferAllocInfo, &frame.commandBuffer));
+    }
 }
 
 void Stasis::VulkanRenderer::InitSyncStructures()
 {
 }
 
-void Stasis::VulkanRenderer::CreateSwapchain(uint32_t width, uint32_t height)
-{
+void Stasis::VulkanRenderer::CreateSwapchain(
+    const uint32_t width,
+    const uint32_t height
+) {
     vkb::SwapchainBuilder swapchainBuilder {selectedGPU, device, surface};
     swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 

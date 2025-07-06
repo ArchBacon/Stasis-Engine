@@ -2,36 +2,34 @@
 
 #include "vk_types.h"
 
-namespace vkinit
+namespace Stasis::vkinit
 {
-    //> init_cmd
-    VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t QueueFamilyIndex, VkCommandPoolCreateFlags Flags = 0);
-    VkCommandBufferAllocateInfo CommandBufferAllocateInfo(VkCommandPool Pool, uint32_t Count = 1);
-    //< init_cmd
+    VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
+    VkCommandBufferAllocateInfo CommandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1);
 
-    VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags Flags = 0);
-    VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer Cmd);
+    VkCommandBufferBeginInfo CommandBufferBeginInfo(VkCommandBufferUsageFlags flags = 0);
+    VkCommandBufferSubmitInfo CommandBufferSubmitInfo(VkCommandBuffer commandBuffer);
 
-    VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags Flags = 0);
-    VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags Flags = 0);
+    VkFenceCreateInfo FenceCreateInfo(VkFenceCreateFlags flags = 0);
+    VkSemaphoreCreateInfo SemaphoreCreateInfo(VkSemaphoreCreateFlags flags = 0);
 
-    VkSubmitInfo2 SubmitInfo(const VkCommandBufferSubmitInfo* Cmd, const VkSemaphoreSubmitInfo* SignalSemaphoreInfo, const VkSemaphoreSubmitInfo* WaitSemaphoreInfo);
+    VkSubmitInfo2 SubmitInfo(const VkCommandBufferSubmitInfo* commandBuffer, const VkSemaphoreSubmitInfo* signalSemaphoreInfo, const VkSemaphoreSubmitInfo* waitSemaphoreInfo);
     VkPresentInfoKHR PresentInfo();
     
-    VkRenderingAttachmentInfo AttachmentInfo(VkImageView View, const VkClearValue* Clear, VkImageLayout Layout /*= VKIMAGELAYOUTCOLORATTACHMENTOPTIMAL*/);
-    VkRenderingAttachmentInfo DepthAttachmentInfo(VkImageView View, VkImageLayout Layout /*= VKIMAGELAYOUTCOLORATTACHMENTOPTIMAL*/);
-    VkRenderingInfo RenderingInfo(VkExtent2D RenderExtent, const VkRenderingAttachmentInfo* ColorAttachment, const VkRenderingAttachmentInfo* DepthAttachment);
-    VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags AspectMask);
+    VkRenderingAttachmentInfo AttachmentInfo(VkImageView view, const VkClearValue* clear, VkImageLayout layout);
+    VkRenderingAttachmentInfo DepthAttachmentInfo(VkImageView view, VkImageLayout layout);
+    VkRenderingInfo RenderingInfo(VkExtent2D renderExtent, const VkRenderingAttachmentInfo* colorAttachment, const VkRenderingAttachmentInfo* depthAttachment);
+    VkImageSubresourceRange ImageSubresourceRange(VkImageAspectFlags aspectMask);
 
-    VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkPipelineStageFlags2 StageMask, VkSemaphore Semaphore);
-    VkDescriptorSetLayoutBinding DescriptorsetLayoutBinding(VkDescriptorType Type, VkShaderStageFlags StageFlags, uint32_t Binding);
-    VkDescriptorSetLayoutCreateInfo DescriptorsetLayoutCreateInfo(const VkDescriptorSetLayoutBinding* Bindings, uint32_t BindingCount);
-    VkWriteDescriptorSet WriteDescriptorImage(VkDescriptorType Type, VkDescriptorSet DstSet, const VkDescriptorImageInfo* ImageInfo, uint32_t Binding);
-    VkWriteDescriptorSet WriteDescriptorBuffer(VkDescriptorType Type, VkDescriptorSet DstSet, const VkDescriptorBufferInfo* BufferInfo, uint32_t Binding);
-    VkDescriptorBufferInfo BufferInfo(VkBuffer Buffer, VkDeviceSize Offset, VkDeviceSize Range);
+    VkSemaphoreSubmitInfo SemaphoreSubmitInfo(VkPipelineStageFlags2 stageMask, VkSemaphore semaphore);
+    VkDescriptorSetLayoutBinding DescriptorsetLayoutBinding(VkDescriptorType type, VkShaderStageFlags stageFlags, uint32_t binding);
+    VkDescriptorSetLayoutCreateInfo DescriptorsetLayoutCreateInfo(const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount);
+    VkWriteDescriptorSet WriteDescriptorImage(VkDescriptorType type, VkDescriptorSet dstSet, const VkDescriptorImageInfo* imageInfo, uint32_t binding);
+    VkWriteDescriptorSet WriteDescriptorBuffer(VkDescriptorType type, VkDescriptorSet dstSet, const VkDescriptorBufferInfo* bufferInfo, uint32_t binding);
+    VkDescriptorBufferInfo BufferInfo(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize range);
 
-    VkImageCreateInfo ImageCreateInfo(VkFormat Format, VkImageUsageFlags UsageFlags, VkExtent3D Extent);
-    VkImageViewCreateInfo ImageviewCreateInfo(VkFormat Format, VkImage Image, VkImageAspectFlags AspectFlags);
+    VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent);
+    VkImageViewCreateInfo ImageviewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags);
     VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo();
-    VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits Stage, VkShaderModule ShaderModule, const char* Entry = "main");
+    VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo(VkShaderStageFlagBits stage, VkShaderModule shaderModule, const char* entry = "main");
 }

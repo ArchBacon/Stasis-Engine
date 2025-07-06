@@ -2,7 +2,10 @@
 
 #include "vk_types.h"
 
-class Camera {
-public:
+namespace Stasis
+{
+    class Camera {
+    public:
 
-};
+    };
+}

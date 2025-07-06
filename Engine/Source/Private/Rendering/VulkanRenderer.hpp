@@ -8,6 +8,14 @@
 
 namespace Stasis
 {
+    struct FrameData
+    {
+        VkCommandPool commandPool {};
+        VkCommandBuffer commandBuffer {};
+    };
+
+    constexpr uint8_t FRAME_OVERLAP = 2;
+    
     class VulkanRenderer
     {
         uint32_t frameNumber {0};
@@ -25,6 +33,12 @@ namespace Stasis
         std::vector<VkImage> swapchainImages {};
         std::vector<VkImageView> swapchainImageViews {};
         VkExtent2D swapchainExtent {};
+
+        FrameData frames[FRAME_OVERLAP];
+        FrameData& GetCurrentFrame() { return frames[frameNumber % FRAME_OVERLAP]; }
+
+        VkQueue graphicsQueue {};
+        uint32_t graphicsQueueFamily {};
     
     public:
         VulkanRenderer();

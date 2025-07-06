@@ -2,28 +2,31 @@
 
 #include "vk_types.h"
 
-struct DescriptorLayoutBuilder
+namespace Stasis
 {
-    std::vector<VkDescriptorSetLayoutBinding> Bindings {};
-
-    void AddBinding(uint32_t Binding, VkDescriptorType Type);
-    void Clear();
-    VkDescriptorSetLayout Build(VkDevice Device, VkShaderStageFlags ShaderStages, const void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags Flags = 0);
-};
-
-struct DescriptorAllocator
-{
-    struct PoolSizeRatio
+    struct DescriptorLayoutBuilder
     {
-        VkDescriptorType Type {};
-        float Ratio {};
+        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+
+        void AddBinding(uint32_t binding, VkDescriptorType type);
+        void Clear();
+        VkDescriptorSetLayout Build(VkDevice device, VkShaderStageFlags shaderStages, const void* pNext = nullptr, VkDescriptorSetLayoutCreateFlags flags = 0);
     };
 
-    VkDescriptorPool Pool {};
+    struct DescriptorAllocator
+    {
+        struct PoolSizeRatio
+        {
+            VkDescriptorType type {};
+            float ratio {};
+        };
 
-    void InitPool(VkDevice Device, uint32_t MaxSets, std::span<PoolSizeRatio> PoolRatios);
-    void ClearDescriptors(VkDevice Device);
-    void DestroyPool(VkDevice Device);
+        VkDescriptorPool pool {};
 
-    VkDescriptorSet Allocate(VkDevice Device, VkDescriptorSetLayout Layout);
-};
+        void InitPool(VkDevice device, uint32_t maxSets, std::span<PoolSizeRatio> poolRatios);
+        void ClearDescriptors(VkDevice device);
+        void DestroyPool(VkDevice device);
+
+        VkDescriptorSet Allocate(VkDevice device, VkDescriptorSetLayout layout);
+    };
+}
