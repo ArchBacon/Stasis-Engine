@@ -37,7 +37,8 @@ project "Engine"
     }
 
     removefiles {
-        "**.bat",
+        "%{prj.name}/Shaders/**.bat",
+        "%{prj.name}/Shaders/**.spv",
     }
 
     includedirs {
