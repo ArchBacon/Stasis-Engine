@@ -2,9 +2,9 @@
 
 int main(int argc, char* argv[])
 {
-    Engine.Initialize();
-    Engine.Run();
-    Engine.Shutdown();
+    gEngine.Initialize();
+    gEngine.Run();
+    gEngine.Shutdown();
 
     return 0;
 }

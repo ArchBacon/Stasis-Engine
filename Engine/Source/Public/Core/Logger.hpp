@@ -24,53 +24,53 @@ namespace Stasis
  */
 class Logger
 {
-    std::shared_ptr<spdlog::logger> Log {};
+    std::shared_ptr<spdlog::logger> log {};
     
 public:
-    explicit Logger(const std::string& Name);
+    explicit Logger(const std::string& name);
 
     template <typename... TArgs>
-    void Trace(const std::string& Format, TArgs&&... Args);
+    void Trace(const std::string& format, TArgs&&... args);
 
     template <typename... TArgs>
-    void Info(const std::string& Format, TArgs&&... Args);
+    void Info(const std::string& format, TArgs&&... args);
 
     template <typename... TArgs>
-    void Warn(const std::string& Format, TArgs&&... Args);
+    void Warn(const std::string& format, TArgs&&... args);
 
     template <typename... TArgs>
-    void Error(const std::string& Format, TArgs&&... Args);
+    void Error(const std::string& format, TArgs&&... args);
 };
 
 template <typename... TArgs>
-void Logger::Trace(const std::string& Format, TArgs&&... Args)
+void Logger::Trace(const std::string& format, TArgs&&... args)
 {
 #ifndef NDEBUG
-    Log->trace(fmt::runtime(Format), std::forward<TArgs>(Args)...);
+    log->trace(fmt::runtime(format), std::forward<TArgs>(args)...);
 #endif
 }
 
-template <typename... TArgs>
-void Logger::Info(const std::string& Format, TArgs&&... Args)
+template <typename... Args>
+void Logger::Info(const std::string& format, Args&&... args)
 {
 #ifndef NDEBUG
-    Log->info(fmt::runtime(Format), std::forward<TArgs>(Args)...);
+    log->info(fmt::runtime(format), std::forward<Args>(args)...);
 #endif
 }
 
-template <typename... TArgs>
-void Logger::Warn(const std::string& Format, TArgs&&... Args)
+template <typename... Args>
+void Logger::Warn(const std::string& format, Args&&... args)
 {
 #ifndef NDEBUG
-    Log->warn(fmt::runtime(Format), std::forward<TArgs>(Args)...);
+    log->warn(fmt::runtime(format), std::forward<Args>(args)...);
 #endif
 }
 
-template <typename... TArgs>
-void Logger::Error(const std::string& Format, TArgs&&... Args)
+template <typename... Args>
+void Logger::Error(const std::string& format, Args&&... args)
 {
 #ifndef NDEBUG        
-    Log->error(fmt::runtime(Format), std::forward<TArgs>(Args)...);
+    log->error(fmt::runtime(format), std::forward<Args>(args)...);
 #endif
 }
 }

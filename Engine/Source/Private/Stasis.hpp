@@ -1,6 +1,4 @@
-﻿// Copyright (c) 2025, Christian Delicaat. All rights reserved.
-
-#pragma once
+﻿#pragma once
 
 #include "Core/Logger.hpp"
 

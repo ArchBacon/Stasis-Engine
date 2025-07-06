@@ -8,13 +8,13 @@ namespace Stasis
 {
     class Engine
     {
-        bool IsInitialized {false};
-        bool StopRendering {false};
-        bool IsRunning {true};
-        unsigned int FrameNumber {0};
-        int2 WindowExtent {1024, 576};
+        bool isInitialized {false};
+        bool stopRendering {false};
+        bool isRunning {true};
+        unsigned int frameNumber {0};
+        int2 windowExtent {1024, 576};
 
-        SDL_Window* Window {nullptr};
+        SDL_Window* window {nullptr};
         
     public:
         void Initialize();
@@ -23,4 +23,4 @@ namespace Stasis
     };
 }
 
-extern Stasis::Engine Engine;
+extern Stasis::Engine gEngine;

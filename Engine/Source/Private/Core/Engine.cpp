@@ -5,7 +5,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include "Stasis.hpp"
 
-Stasis::Engine Engine;
+Stasis::Engine gEngine;
 
 void Stasis::Engine::Initialize()
 {
@@ -13,59 +13,59 @@ void Stasis::Engine::Initialize()
 
     SDL_Init(SDL_INIT_VIDEO);
 
-    constexpr SDL_WindowFlags WindowFlags = SDL_WINDOW_VULKAN;
-    Window = SDL_CreateWindow("Stasis Engine", WindowExtent.x, WindowExtent.y, WindowFlags);
-    
-    IsInitialized = true;
+    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
+    window = SDL_CreateWindow("Stasis Engine", windowExtent.x, windowExtent.y, windowFlags);
+
+    isInitialized = true;
 }
 
 void Stasis::Engine::Run()
 {
     // Do not run engine if not successfully initialized
-    if (!IsInitialized) return;
-    
-    auto PreviousTime = std::chrono::high_resolution_clock::now();
-    SDL_Event Event;
-    
-    while (IsRunning)
+    if (!isInitialized) return;
+
+    auto previousTime = std::chrono::high_resolution_clock::now();
+    SDL_Event event;
+
+    while (isRunning)
     {
-        const auto CurrentTime = std::chrono::high_resolution_clock::now();
-        const float Elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(CurrentTime - PreviousTime).count());
-        const float DeltaTime = Elapsed / 1000000.0f; // time in seconds
-        const float FrameTime = Elapsed / 1000.0f; // time in milliseconds
-        PreviousTime = CurrentTime;
+        const auto currentTime = std::chrono::high_resolution_clock::now();
+        const float elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(currentTime - previousTime).count());
+        const float deltaTime = elapsed / 1000000.0f; // time in seconds
+        const float frameTime = elapsed / 1000.0f; // time in milliseconds
+        previousTime = currentTime;
 
         // LogEngine->Trace("FPS: {:.1f} ({}ms)", 1000.0f / FrameTime, FrameTime);
 
         // Handle events in queue
-        while (SDL_PollEvent(&Event))
+        while (SDL_PollEvent(&event))
         {
             // Close the window when the user ALT-F4s or closes the window
-            if (Event.type == SDL_EVENT_QUIT)
+            if (event.type == SDL_EVENT_QUIT)
             {
-                IsRunning = false;
+                isRunning = false;
             }
 
             // Pause rendering when the window is minimized or loses focus
-            if (Event.type == SDL_EVENT_WINDOW_MINIMIZED || Event.type == SDL_EVENT_WINDOW_FOCUS_LOST)
+            if (event.type == SDL_EVENT_WINDOW_MINIMIZED || event.type == SDL_EVENT_WINDOW_FOCUS_LOST)
             {
-                StopRendering = true;
+                stopRendering = true;
             }
-            if (Event.type == SDL_EVENT_WINDOW_RESTORED || Event.type == SDL_EVENT_WINDOW_FOCUS_GAINED)
+            if (event.type == SDL_EVENT_WINDOW_RESTORED || event.type == SDL_EVENT_WINDOW_FOCUS_GAINED)
             {
-                StopRendering = false;
+                stopRendering = false;
             }
         }
-        
+
         // Do not draw if we are minimized
-        if (StopRendering)
+        if (stopRendering)
         {
             // Throttle the speed to avoid the endless spinning
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
 
-        FrameNumber++;
+        frameNumber++;
     }
 }
 
@@ -73,8 +73,8 @@ void Stasis::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
 
-    if (IsInitialized)
+    if (isInitialized)
     {
-        SDL_DestroyWindow(Window);
+        SDL_DestroyWindow(window);
     }
 }
