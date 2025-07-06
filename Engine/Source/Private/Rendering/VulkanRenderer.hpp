@@ -2,6 +2,9 @@
 
 #include <vulkan/vulkan.h>
 #include <SDL3/SDL.h>
+#include "vk_types.h"
+#include "vk_initializers.h"
+#include <VkBootstrap.h>
 
 namespace Stasis
 {
@@ -9,8 +12,19 @@ namespace Stasis
     {
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
-
         SDL_Window* window {nullptr};
+
+        VkInstance instance {};
+        VkDebugUtilsMessengerEXT debugMessenger {};
+        VkPhysicalDevice selectedGPU {};
+        VkDevice device {};
+        VkSurfaceKHR surface {};
+        
+        VkSwapchainKHR swapchain {};
+        VkFormat swapchainImageFormat {};
+        std::vector<VkImage> swapchainImages {};
+        std::vector<VkImageView> swapchainImageViews {};
+        VkExtent2D swapchainExtent {};
     
     public:
         VulkanRenderer();
@@ -21,10 +35,20 @@ namespace Stasis
         VulkanRenderer& operator=(const VulkanRenderer&) = delete;
         VulkanRenderer& operator=(VulkanRenderer&&)      = delete;
 
-        void Draw();
-
     protected:
         void Initialize();
         void Shutdown();
+
+    public:
+        void Draw();
+        
+    private:
+        void InitVulkan();
+        void InitSwapchain();
+        void InitCommands();
+        void InitSyncStructures();
+
+        void CreateSwapchain(uint32_t width, uint32_t height);
+        void DestroySwapchain();
     };
 }
