@@ -10,6 +10,7 @@ workspace "Stasis"
 group "Dependencies"
     include "Engine/ThirdParty/spdlog"
     include "Engine/ThirdParty/GLM"
+    include "Engine/ThirdParty/ImGui"
 group ""
 
 project "Engine"
@@ -45,6 +46,7 @@ project "Engine"
         "%{prj.name}/Source/Private/",
         "$(VULKAN_SDK)/include/",
         "%{prj.name}/Thirdparty/glm/include",
+        "%{prj.name}/Thirdparty/imgui/include",
         "%{prj.name}/Thirdparty/SDL/include",
         "%{prj.name}/Thirdparty/spdlog/include",
         "%{prj.name}/Thirdparty/vkbootstrap",
@@ -60,6 +62,7 @@ project "Engine"
         "vulkan-1",
         "spdlog",
         "GLM",
+        "ImGui",
         "SDL3.lib",
     }
 

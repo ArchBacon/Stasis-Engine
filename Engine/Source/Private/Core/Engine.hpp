@@ -4,6 +4,7 @@
 #include "Rendering/vk_types.h"
 #include "VkBootstrap.h"
 #include "Rendering/vk_descriptors.h"
+#include "imgui/imgui.h"
 
 struct SDL_Window;
 

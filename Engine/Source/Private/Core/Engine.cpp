@@ -187,8 +187,8 @@ void Stasis::Engine::DrawBackground(
     // Bind the descriptor set containing the draw image for the compute pipeline
     vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, GradientPipelineLayout, 0, 1, &DrawImageDescriptors, 0, nullptr);
 
-    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
-    vkCmdDispatch(CommandBuffer, std::ceil(DrawExtent.width / 16.0), std::ceil(DrawExtent.height / 16.0), 1);
+    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size, so we need to divide by it
+    vkCmdDispatch(CommandBuffer, static_cast<uint32_t>(std::ceil(DrawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(DrawExtent.height / 16.0)), 1);
 }
 
 void Stasis::Engine::Shutdown()
