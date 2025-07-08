@@ -2,6 +2,6 @@
 
 #include "vk_types.h"
 
-namespace vkutil {
-    bool LoadShaderModule(const char* FilePath, VkDevice Device, VkShaderModule* OutShaderModule);
+namespace Stasis::vkutil {
+    bool LoadShaderModule(const char* filePath, VkDevice device, VkShaderModule* outShaderModule);
 };

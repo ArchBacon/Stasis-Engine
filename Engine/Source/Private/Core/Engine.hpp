@@ -1,25 +1,26 @@
 ﻿#pragma once
 
-#include "Core/Types.hpp"
+#include <memory>
 
 struct SDL_Window;
 
 namespace Blackbox
 {
+    class VulkanRenderer;
+    
     class Engine
     {
-        bool isInitialized {false};
         bool stopRendering {false};
         bool isRunning {true};
-        unsigned int frameNumber {0};
-        int2 windowExtent {1024, 576};
-
-        SDL_Window* window {nullptr};
+        
+        std::unique_ptr<VulkanRenderer> renderer {nullptr};
         
     public:
         void Initialize();
         void Run();
         void Shutdown();
+
+        [[nodiscard]] VulkanRenderer& Renderer() const { return *renderer; }
     };
 }
 
