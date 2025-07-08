@@ -1,6 +1,4 @@
-﻿// vulkan_guide.h : Include file for standard system include files,
-// or project specific include files.
-#pragma once
+﻿#pragma once
 
 #include <memory>
 #include <optional>
@@ -20,20 +18,23 @@
 
 #include "Stasis.hpp"
 
-#define VK_CHECK(x)                                                     \
-    do {                                                                \
-        VkResult err = x;                                               \
-        if (err) {                                                      \
-            LogRenderer->Error("Detected Vulkan error: {}", string_VkResult(err)); \
-            abort();                                                    \
-        }                                                               \
+namespace Stasis
+{
+    #define VK_CHECK(x)                                                             \
+    do {                                                                            \
+        VkResult err = x;                                                           \
+        if (err) {                                                                  \
+            LogRenderer->Error("Detected Vulkan error: {}", string_VkResult(err));  \
+            abort();                                                                \
+        }                                                                           \
     } while (0)
 
-struct AllocatedImage
-{
-    VkImage Image {};
-    VkImageView ImageView {};
-    VmaAllocation Allocation {};
-    VkExtent3D ImageExtent {};
-    VkFormat ImageFormat {};
-};
+    struct AllocatedImage
+    {
+        VkImage image {};
+        VkImageView imageView {};
+        VmaAllocation allocation {};
+        VkExtent3D imageExtent {};
+        VkFormat imageFormat {};
+    };
+}
