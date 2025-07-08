@@ -47,9 +47,13 @@ void Stasis::VulkanRenderer::Shutdown()
 
         // Destroy sync objects
         vkDestroyFence(device, frame.renderFence, nullptr);
-        vkDestroySemaphore(device, frame.renderSemaphore, nullptr);
         vkDestroySemaphore(device, frame.swapchainSemaphore, nullptr);
     }
+
+    for (const auto& renderSemaphore : renderSemaphores)
+    {
+        vkDestroySemaphore(device, renderSemaphore, nullptr);
+    } 
     
     DestroySwapchain();
 
@@ -109,7 +113,7 @@ void Stasis::VulkanRenderer::Draw()
     // We will signal the renderSemaphore, to signal that rendering has finished.
     VkCommandBufferSubmitInfo commandBufferSubmitInfo = vkinit::CommandBufferSubmitInfo(commandBuffer);
     VkSemaphoreSubmitInfo waitInfo = vkinit::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, GetCurrentFrame().swapchainSemaphore);
-    VkSemaphoreSubmitInfo signalInfo = vkinit::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, GetCurrentFrame().renderSemaphore);
+    VkSemaphoreSubmitInfo signalInfo = vkinit::SemaphoreSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, renderSemaphores[swapchainImageIndex]);
     VkSubmitInfo2 submit = vkinit::SubmitInfo(&commandBufferSubmitInfo, &signalInfo, &waitInfo);
 
     // Submit the command buffer to the queue and execute it.
@@ -124,7 +128,7 @@ void Stasis::VulkanRenderer::Draw()
     {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &GetCurrentFrame().renderSemaphore,
+        .pWaitSemaphores = &renderSemaphores[swapchainImageIndex],
         .swapchainCount = 1,
         .pSwapchains = &swapchain,
         .pImageIndices = &swapchainImageIndex,
@@ -231,7 +235,13 @@ void Stasis::VulkanRenderer::InitSyncStructures()
     {
         VK_CHECK(vkCreateFence(device, &fenceCreateInfo, nullptr, &frame.renderFence));
         VK_CHECK(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &frame.swapchainSemaphore));
-        VK_CHECK(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &frame.renderSemaphore));
+    }
+
+    renderSemaphores.clear();
+    renderSemaphores.resize(swapchainImages.size());
+    for (auto& renderSemaphore : renderSemaphores) 
+    {
+        VK_CHECK(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &renderSemaphore));
     }
 }
 

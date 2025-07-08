@@ -13,7 +13,6 @@ namespace Stasis
         VkCommandPool commandPool {};
         VkCommandBuffer commandBuffer {};
         VkSemaphore swapchainSemaphore {};
-        VkSemaphore renderSemaphore {};
         VkFence renderFence {};
     };
 
@@ -39,6 +38,7 @@ namespace Stasis
 
         FrameData frames[FRAME_OVERLAP];
         FrameData& GetCurrentFrame() { return frames[frameNumber % FRAME_OVERLAP]; }
+        std::vector<VkSemaphore> renderSemaphores {};
 
         VkQueue graphicsQueue {};
         uint32_t graphicsQueueFamily {};
