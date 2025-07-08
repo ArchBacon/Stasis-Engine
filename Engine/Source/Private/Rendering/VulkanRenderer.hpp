@@ -16,7 +16,7 @@ namespace Stasis
         VkFence renderFence {};
     };
 
-    constexpr uint8_t FRAME_OVERLAP = 2;
+    constexpr uint8_t FRAME_OVERLAP = 3;
     
     class VulkanRenderer
     {
