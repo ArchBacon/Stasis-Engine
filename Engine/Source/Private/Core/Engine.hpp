@@ -4,7 +4,7 @@
 
 struct SDL_Window;
 
-namespace Stasis
+namespace Blackbox
 {
     class Engine
     {
@@ -23,4 +23,4 @@ namespace Stasis
     };
 }
 
-extern Stasis::Engine gEngine;
+extern Blackbox::Engine gEngine;

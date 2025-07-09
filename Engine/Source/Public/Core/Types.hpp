@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace Stasis
+namespace Blackbox
 {
     // integers
     using int2 = glm::ivec2;

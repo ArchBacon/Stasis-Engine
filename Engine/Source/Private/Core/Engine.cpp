@@ -3,23 +3,23 @@
 #include <chrono>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include "Stasis.hpp"
+#include "Blackbox.hpp"
 
-Stasis::Engine gEngine;
+Blackbox::Engine gEngine;
 
-void Stasis::Engine::Initialize()
+void Blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
     SDL_Init(SDL_INIT_VIDEO);
 
     constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
-    window = SDL_CreateWindow("Stasis Engine", windowExtent.x, windowExtent.y, windowFlags);
+    window = SDL_CreateWindow("Blackbox", windowExtent.x, windowExtent.y, windowFlags);
 
     isInitialized = true;
 }
 
-void Stasis::Engine::Run()
+void Blackbox::Engine::Run()
 {
     // Do not run engine if not successfully initialized
     if (!isInitialized) return;
@@ -69,7 +69,7 @@ void Stasis::Engine::Run()
     }
 }
 
-void Stasis::Engine::Shutdown()
+void Blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
 

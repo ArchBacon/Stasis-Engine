@@ -1,6 +1,6 @@
-workspace "Stasis"
+workspace "Blackbox"
     architecture "x86_64"
-    configurations { "Debug", "Development", "Shipping" }
+    configurations { "Development", "Debug", "Shipping" }
     startproject "Engine"
     buildoptions { "/utf-8" }
 

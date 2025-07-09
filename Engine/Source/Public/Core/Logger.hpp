@@ -3,7 +3,7 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-namespace Stasis
+namespace Blackbox
 {
 /**
  * Logger class for outputting color-coded messages to the console using spdlog.
