@@ -193,6 +193,13 @@ void Stasis::VulkanRenderer::DrawBackground(VkCommandBuffer commandBuffer)
     // Bind the descriptor set container the draw image for the compute pipeline
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gradientPipelineLayout, 0, 1, &drawImageDescriptors, 0, nullptr);
 
+    const ComputePushConstants pushConstants
+    {
+        .data1 = float4(1, 0, 0, 1),
+        .data2 = float4(0, 0, 1, 1),
+    };
+    vkCmdPushConstants(commandBuffer, gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pushConstants), &pushConstants);
+    
     // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
@@ -416,20 +423,27 @@ void Stasis::VulkanRenderer::InitPipelines()
 
 void Stasis::VulkanRenderer::InitBackgroundPipelines()
 {
+    constexpr VkPushConstantRange pushConstants
+    {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = sizeof(ComputePushConstants),
+    };
+
     const VkPipelineLayoutCreateInfo computeLayout
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext = nullptr,
         .setLayoutCount = 1,
         .pSetLayouts = &drawImageDescriptorLayout,
-        .pPushConstantRanges = nullptr,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &pushConstants,
     };
 
     VK_CHECK(vkCreatePipelineLayout(device, &computeLayout, nullptr, &gradientPipelineLayout));
 
     // Layout code
     VkShaderModule computerDrawShader {};
-    if (!vkutil::LoadShaderModule("Shaders/gradient.comp.spv", device, &computerDrawShader))
+    if (!vkutil::LoadShaderModule("Shaders/gradient_color.comp", device, &computerDrawShader))
     {
         LogRenderer->Error("Error when building the compute shader.");
     }

@@ -9,6 +9,8 @@
 
 #include <ranges>
 
+#include "Core/Types.hpp"
+
 namespace Stasis
 {
     struct DeletionQueue
@@ -38,6 +40,14 @@ namespace Stasis
         VkSemaphore swapchainSemaphore {};
         VkFence renderFence {};
         DeletionQueue deletionQueue {};
+    };
+
+    struct ComputePushConstants
+    {
+        float4 data1;
+        float4 data2;
+        float4 data3;
+        float4 data4;
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
