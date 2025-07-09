@@ -1,8 +1,10 @@
 ﻿#include "VulkanRenderer.hpp"
 #include <SDL3/SDL_vulkan.h>
 #include "vk_images.h"
+#pragma warning(push, 0)
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
+#pragma warning(pop)
 #include "vk_pipelines.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl3.h"
