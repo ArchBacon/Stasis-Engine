@@ -2,6 +2,9 @@
 
 #include <chrono>
 #include "Stasis.hpp"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl3.h"
+#include "imgui/imgui_impl_vulkan.h"
 #include "Rendering/VulkanRenderer.hpp"
 
 Stasis::Engine gEngine;
@@ -46,6 +49,8 @@ void Stasis::Engine::Run()
             {
                 stopRendering = false;
             }
+
+            ImGui_ImplSDL3_ProcessEvent(&event);
         }
 
         // Do not draw if we are minimized
@@ -55,7 +60,7 @@ void Stasis::Engine::Run()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
-
+        
         renderer->Draw();
     }
 }

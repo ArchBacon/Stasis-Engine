@@ -104,6 +104,7 @@ namespace Stasis
 
     public:
         void Draw();
+        void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
         
     private:
         void InitVulkan();

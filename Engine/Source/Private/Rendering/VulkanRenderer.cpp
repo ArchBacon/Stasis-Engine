@@ -4,6 +4,9 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 #include "vk_pipelines.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl3.h"
+#include "imgui/imgui_impl_vulkan.h"
 
 #ifdef NDEBUG
 constexpr bool USE_VALIDATION_LAYERS = false;
@@ -39,6 +42,7 @@ void Stasis::VulkanRenderer::Initialize()
     InitSyncStructures();
     InitDescriptors();
     InitPipelines();
+    InitImGui();
 }
 
 void Stasis::VulkanRenderer::Shutdown()
@@ -76,6 +80,16 @@ void Stasis::VulkanRenderer::Shutdown()
 
 void Stasis::VulkanRenderer::Draw()
 {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    // Some ImGui UI to test
+    ImGui::ShowDemoWindow();
+
+    // Make ImGui calculate the internal draw structures
+    ImGui::Render();
+    
     constexpr uint32_t singleSecond = 1000000000;
     
     // Wait until the GPU has finished rendering the last frame. Timeout of one second
@@ -115,9 +129,15 @@ void Stasis::VulkanRenderer::Draw()
     // execute a copy from the draw image into the swapchain
     vkutil::CopyImageToImage(commandBuffer, drawImage.image, swapchainImages[swapchainImageIndex], drawExtent, swapchainExtent);
 
-    // set swapchain image layout to Present so we can show it on the screen
-    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    // set swapchain image layout to Attachment Optimal so we can draw it
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+    //draw imgui into the swapchain image
+    DrawImGui(commandBuffer,  swapchainImageViews[swapchainImageIndex]);
+    
+    // set swapchain image layout to Present so we can show it on the screen
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    
     //finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(commandBuffer));
 
@@ -151,6 +171,18 @@ void Stasis::VulkanRenderer::Draw()
 
     // Increase the number of frames drawn.
     frameNumber++;
+}
+
+void Stasis::VulkanRenderer::DrawImGui(
+    VkCommandBuffer commandBuffer,
+    VkImageView targetImageView
+) {
+    VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = vkinit::RenderingInfo(swapchainExtent, &colorAttachmentInfo, nullptr);
+
+    vkCmdBeginRendering(commandBuffer, &renderInfo);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+    vkCmdEndRendering(commandBuffer);
 }
 
 void Stasis::VulkanRenderer::DrawBackground(VkCommandBuffer commandBuffer)
@@ -483,4 +515,66 @@ void Stasis::VulkanRenderer::ImmediateSubmit(
 
 void Stasis::VulkanRenderer::InitImGui()
 {
+    // 1: Create descriptor pool for ImGui
+    // The size of the pool is very oversized, but it's copied from the ImGui demo itself
+    VkDescriptorPoolSize poolSizes[] = {
+        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
+    };
+
+    const VkDescriptorPoolCreateInfo poolInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = 1000,
+        .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
+        .pPoolSizes = poolSizes,
+    };
+
+    VkDescriptorPool imguiPool {};
+    VK_CHECK(vkCreateDescriptorPool(device, &poolInfo, nullptr, &imguiPool));
+
+    // 2: Initialize ImGui library
+    // This initialized the core structures of ImGui
+    ImGui::CreateContext();
+
+    // This initialized ImGui for SDL
+    ImGui_ImplSDL3_InitForVulkan(window);
+
+    // This initialized ImGui for Vulkan
+    ImGui_ImplVulkan_InitInfo initInfo
+    {
+        .Instance = instance,
+        .PhysicalDevice = selectedGPU,
+        .Device = device,
+        .Queue = graphicsQueue,
+        .DescriptorPool = imguiPool,
+        .MinImageCount = 3,
+        .ImageCount = 3,
+        .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+        .UseDynamicRendering = true,
+        
+        // Dynamic rendering parameters for ImGui to use
+        .PipelineRenderingCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &swapchainImageFormat,
+        },
+    };
+
+    ImGui_ImplVulkan_Init(&initInfo);
+
+    deletionQueue.Add([=]() {
+        ImGui_ImplVulkan_Shutdown();
+        vkDestroyDescriptorPool(device, imguiPool, nullptr);
+    });
 }
