@@ -50,6 +50,14 @@ namespace Stasis
         float4 data4;
     };
 
+    struct ComputeEffect
+    {
+        const char* name {};
+        VkPipeline pipeline {};
+        VkPipelineLayout layout {};
+        ComputePushConstants data {};
+    };
+
     constexpr uint8_t FRAME_OVERLAP = 3;
     
     class VulkanRenderer
@@ -98,6 +106,9 @@ namespace Stasis
         VkFence immediateFence {};
         VkCommandBuffer immediateCommandBuffer {};
         VkCommandPool immediateCommandPool {};
+
+        std::vector<ComputeEffect> backgroundEffects {};
+        int currentComputeEffectIndex {0};
     
     public:
         VulkanRenderer();
