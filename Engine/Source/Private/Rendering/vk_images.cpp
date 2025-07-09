@@ -32,14 +32,14 @@ void Stasis::vkutil::CopyImageToImage(
     const VkCommandBuffer command,
     const VkImage source,
     const VkImage destination,
-    const VkExtent2D sourceSize,
+    const VkExtent2D srcSize,
     const VkExtent2D dstSize
 ) {
     VkImageBlit2 blitRegion {};
     blitRegion.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
     
-    blitRegion.srcOffsets[1].x = static_cast<int32_t>(sourceSize.width);
-    blitRegion.srcOffsets[1].y = static_cast<int32_t>(sourceSize.height);
+    blitRegion.srcOffsets[1].x = static_cast<int32_t>(srcSize.width);
+    blitRegion.srcOffsets[1].y = static_cast<int32_t>(srcSize.height);
     blitRegion.srcOffsets[1].z = 1;
 
     blitRegion.dstOffsets[1].x = static_cast<int32_t>(dstSize.width);

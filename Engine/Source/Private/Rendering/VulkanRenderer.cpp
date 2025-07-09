@@ -1,6 +1,8 @@
 ﻿#include "VulkanRenderer.hpp"
 #include <SDL3/SDL_vulkan.h>
 #include "vk_images.h"
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 #ifdef NDEBUG
 constexpr bool USE_VALIDATION_LAYERS = false;
@@ -41,19 +43,23 @@ void Stasis::VulkanRenderer::Shutdown()
     // Make sure the GPU has stopped doing its thing
     vkDeviceWaitIdle(device);
 
-    for (const auto& frame : frames)
+    for (auto& frame : frames)
     {
         vkDestroyCommandPool(device, frame.commandPool, nullptr);
 
         // Destroy sync objects
         vkDestroyFence(device, frame.renderFence, nullptr);
         vkDestroySemaphore(device, frame.swapchainSemaphore, nullptr);
+        
+        frame.deletionQueue.Flush();
     }
 
     for (const auto& renderSemaphore : renderSemaphores)
     {
         vkDestroySemaphore(device, renderSemaphore, nullptr);
-    } 
+    }
+
+    mainDeletionQueue.Flush();
     
     DestroySwapchain();
 
@@ -71,6 +77,7 @@ void Stasis::VulkanRenderer::Draw()
     
     // Wait until the GPU has finished rendering the last frame. Timeout of one second
     VK_CHECK(vkWaitForFences(device, 1, &GetCurrentFrame().renderFence, true, singleSecond));
+    GetCurrentFrame().deletionQueue.Flush();    
     VK_CHECK(vkResetFences(device, 1, &GetCurrentFrame().renderFence));
 
     // Request image from the swapchain
@@ -87,25 +94,28 @@ void Stasis::VulkanRenderer::Draw()
     // Begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that.
     const VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    // Start the command buffer recording.
-    VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+    drawExtent.width = drawImage.imageExtent.width;
+    drawExtent.height = drawImage.imageExtent.height;
 
-    // Make the swapchain image writable mode before rendering
-    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));	
 
-    // Make a clear-color from the frame number. This will flash with a 120-frame period.
-    const float flash = std::abs(std::sin((float)frameNumber / 120.0f));
-    const VkClearColorValue clearValue {{0.0f, 0.0f, flash, 1.0f}};
+    // transition our main draw image into general layout so we can write into it
+    // we will overwrite it all so we dont care about what was the older layout
+    vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    const VkImageSubresourceRange clearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    DrawBackground(commandBuffer);
 
-    // Clear image
-    vkCmdClearColorImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+    //transition the draw image and the swapchain image into their correct transfer layouts
+    vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    // Make the swapchain image into presentable mode
-    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    // execute a copy from the draw image into the swapchain
+    vkutil::CopyImageToImage(commandBuffer, drawImage.image, swapchainImages[swapchainImageIndex], drawExtent, swapchainExtent);
 
-    // Finalize the command buffer (we can no longer add commands, but it can now be executed)
+    // set swapchain image layout to Present so we can show it on the screen
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    //finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(commandBuffer));
 
     // Prepare the submission to the queue.
@@ -138,8 +148,18 @@ void Stasis::VulkanRenderer::Draw()
 
     // Increase the number of frames drawn.
     frameNumber++;
+}
 
-    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+void Stasis::VulkanRenderer::DrawBackground(VkCommandBuffer commandBuffer)
+{
+    // Make a clear-color from the frame number. This will flash with a 120-frame period.
+    const float flash = std::abs(std::sin((float)frameNumber / 120.0f));
+    const VkClearColorValue clearValue {{0.0f, 0.0f, flash, 1.0f}};
+
+    const VkImageSubresourceRange clearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+
+    // Clear image
+    vkCmdClearColorImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
 }
 
 void Stasis::VulkanRenderer::InitVulkan()
@@ -198,11 +218,61 @@ void Stasis::VulkanRenderer::InitVulkan()
     // Use vkbootstrap to get a graphics queue
     graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
     graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+    // Initialize the memory allocator
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = selectedGPU;
+    allocatorInfo.device = device;
+    allocatorInfo.instance = instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&allocatorInfo, &allocator);
+
+    mainDeletionQueue.PushFunction([&]() {
+        vmaDestroyAllocator(allocator);
+    });
 }
 
 void Stasis::VulkanRenderer::InitSwapchain()
 {
     CreateSwapchain(windowExtent.width, windowExtent.height);
+
+    //draw image size will match the window
+    VkExtent3D drawImageExtent = {
+        windowExtent.width,
+        windowExtent.height,
+        1
+    };
+
+    //hardcoding the draw format to 32-bit float
+    drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    drawImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags drawImageUsages{};
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
+    drawImageUsages |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo drawImageInfo = vkinit::ImageCreateInfo(drawImage.imageFormat, drawImageUsages, drawImageExtent);
+
+    //for the draw image, we want to allocate it from gpu local memory
+    VmaAllocationCreateInfo drawImageAllocInfo = {};
+    drawImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    drawImageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    //allocate and create the image
+    vmaCreateImage(allocator, &drawImageInfo, &drawImageAllocInfo, &drawImage.image, &drawImage.allocation, nullptr);
+
+    //build a image-view for the draw image to use for rendering
+    VkImageViewCreateInfo drawViewInfo = vkinit::ImageviewCreateInfo(drawImage.imageFormat, drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VK_CHECK(vkCreateImageView(device, &drawViewInfo, nullptr, &drawImage.imageView));
+
+    //add to deletion queues
+    mainDeletionQueue.PushFunction([=]() {
+        vkDestroyImageView(device, drawImage.imageView, nullptr);
+        vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
+    });
 }
 
 void Stasis::VulkanRenderer::InitCommands()
