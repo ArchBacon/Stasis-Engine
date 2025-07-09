@@ -293,6 +293,17 @@ void Stasis::VulkanRenderer::InitCommands()
 
         VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferAllocInfo, &frame.commandBuffer));
     }
+
+    VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &immediateCommandPool));
+
+    // Allocate the command buffer for immediate submits
+    VkCommandBufferAllocateInfo commandAllocInfo = vkinit::CommandBufferAllocateInfo(immediateCommandPool, 1);
+    VK_CHECK(vkAllocateCommandBuffers(device, &commandAllocInfo, &immediateCommandBuffer));
+
+    deletionQueue.Add([=]()
+    {
+        vkDestroyCommandPool(device, immediateCommandPool, nullptr);
+    });
 }
 
 void Stasis::VulkanRenderer::InitSyncStructures()
@@ -316,6 +327,12 @@ void Stasis::VulkanRenderer::InitSyncStructures()
     {
         VK_CHECK(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &renderSemaphore));
     }
+
+    VK_CHECK(vkCreateFence(device, &fenceCreateInfo, nullptr, &immediateFence));
+    deletionQueue.Add([=]()
+    {
+        vkDestroyFence(device, immediateFence, nullptr);
+    });
 }
 
 void Stasis::VulkanRenderer::InitDescriptors()
@@ -439,4 +456,31 @@ void Stasis::VulkanRenderer::DestroySwapchain()
     {
         vkDestroyImageView(device, swapchainImageView, nullptr);
     } 
+}
+
+void Stasis::VulkanRenderer::ImmediateSubmit(
+    std::function<void(VkCommandBuffer)>&& callback
+) {
+    VK_CHECK(vkResetFences(device, 1, &immediateFence));
+    VK_CHECK(vkResetCommandBuffer(immediateCommandBuffer, 0));
+
+    VkCommandBuffer commandBuffer = immediateCommandBuffer;
+    VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+
+    callback(commandBuffer);
+
+    VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo = vkinit::CommandBufferSubmitInfo(commandBuffer);
+    VkSubmitInfo2 submit = vkinit::SubmitInfo(&commandBufferSubmitInfo, nullptr, nullptr);
+
+    // Submit command buffer to the queue and execute it
+    // renderFence will now block until the graphic commands finish execution
+    VK_CHECK(vkQueueSubmit2(graphicsQueue, 1, &submit, immediateFence));
+    VK_CHECK(vkWaitForFences(device, 1, &immediateFence, VK_TRUE, UINT64_MAX));
+}
+
+void Stasis::VulkanRenderer::InitImGui()
+{
 }
