@@ -2,7 +2,7 @@
 
 #include "vk_types.h"
 
-namespace Stasis
+namespace Blackbox
 {
     class Camera {
     public:

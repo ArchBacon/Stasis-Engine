@@ -14,23 +14,23 @@ constexpr bool USE_VALIDATION_LAYERS = false;
 constexpr bool USE_VALIDATION_LAYERS = true;
 #endif
 
-Stasis::VulkanRenderer::VulkanRenderer()
+Blackbox::VulkanRenderer::VulkanRenderer()
 {
     VulkanRenderer::Initialize();
 }
 
-Stasis::VulkanRenderer::~VulkanRenderer()
+Blackbox::VulkanRenderer::~VulkanRenderer()
 {
     VulkanRenderer::Shutdown();
 }
 
-void Stasis::VulkanRenderer::Initialize()
+void Blackbox::VulkanRenderer::Initialize()
 {
     SDL_Init(SDL_INIT_VIDEO);
 
     constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
     window = SDL_CreateWindow(
-        "Stasis Engine",
+        "Blackbox",
         static_cast<int32_t>(windowExtent.width),
         static_cast<int32_t>(windowExtent.height),
         windowFlags
@@ -45,7 +45,7 @@ void Stasis::VulkanRenderer::Initialize()
     InitImGui();
 }
 
-void Stasis::VulkanRenderer::Shutdown()
+void Blackbox::VulkanRenderer::Shutdown()
 {
     // Make sure the GPU has stopped doing its thing
     vkDeviceWaitIdle(device);
@@ -78,7 +78,7 @@ void Stasis::VulkanRenderer::Shutdown()
     SDL_DestroyWindow(window);
 }
 
-void Stasis::VulkanRenderer::Draw()
+void Blackbox::VulkanRenderer::Draw()
 {
     // --------------- IMGUI START ---------------
     ImGui_ImplVulkan_NewFrame();
@@ -185,7 +185,7 @@ void Stasis::VulkanRenderer::Draw()
     frameNumber++;
 }
 
-void Stasis::VulkanRenderer::DrawImGui(
+void Blackbox::VulkanRenderer::DrawImGui(
     VkCommandBuffer commandBuffer,
     VkImageView targetImageView
 ) {
@@ -197,7 +197,7 @@ void Stasis::VulkanRenderer::DrawImGui(
     vkCmdEndRendering(commandBuffer);
 }
 
-void Stasis::VulkanRenderer::DrawBackground(
+void Blackbox::VulkanRenderer::DrawBackground(
     VkCommandBuffer commandBuffer
 ) {
     ComputeEffect& effect = backgroundEffects[currentComputeEffectIndex];
@@ -219,13 +219,13 @@ void Stasis::VulkanRenderer::DrawBackground(
     vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
 
-void Stasis::VulkanRenderer::InitVulkan()
+void Blackbox::VulkanRenderer::InitVulkan()
 {
     vkb::InstanceBuilder builder {};
 
     // Make the vulkan instance with basic debug features
     auto resultInstance = builder
-        .set_app_name("Stasis Engine")
+        .set_app_name("Blackbox")
         .request_validation_layers(USE_VALIDATION_LAYERS)
         .use_default_debug_messenger()
         .require_api_version(1, 3, 0)
@@ -289,7 +289,7 @@ void Stasis::VulkanRenderer::InitVulkan()
     });
 }
 
-void Stasis::VulkanRenderer::InitSwapchain()
+void Blackbox::VulkanRenderer::InitSwapchain()
 {
     CreateSwapchain(windowExtent.width, windowExtent.height);
 
@@ -332,7 +332,7 @@ void Stasis::VulkanRenderer::InitSwapchain()
     });
 }
 
-void Stasis::VulkanRenderer::InitCommands()
+void Blackbox::VulkanRenderer::InitCommands()
 {
     // Create a command pool for commands submitted to the graphics queue.
     // We also want the pool to allow for resetting of individual command buffers.
@@ -360,7 +360,7 @@ void Stasis::VulkanRenderer::InitCommands()
     });
 }
 
-void Stasis::VulkanRenderer::InitSyncStructures()
+void Blackbox::VulkanRenderer::InitSyncStructures()
 {
     // Create sync structures
     // One fence to control when the GPU has finished rendering the frame,
@@ -389,7 +389,7 @@ void Stasis::VulkanRenderer::InitSyncStructures()
     });
 }
 
-void Stasis::VulkanRenderer::InitDescriptors()
+void Blackbox::VulkanRenderer::InitDescriptors()
 {
     // Create a descriptor pool that will hold 10 sets with 1 image each
     std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
@@ -431,12 +431,12 @@ void Stasis::VulkanRenderer::InitDescriptors()
     });
 }
 
-void Stasis::VulkanRenderer::InitPipelines()
+void Blackbox::VulkanRenderer::InitPipelines()
 {
     InitBackgroundPipelines();
 }
 
-void Stasis::VulkanRenderer::InitBackgroundPipelines()
+void Blackbox::VulkanRenderer::InitBackgroundPipelines()
 {
     constexpr VkPushConstantRange pushConstants
     {
@@ -527,7 +527,7 @@ void Stasis::VulkanRenderer::InitBackgroundPipelines()
     });
 }
 
-void Stasis::VulkanRenderer::CreateSwapchain(
+void Blackbox::VulkanRenderer::CreateSwapchain(
     const uint32_t width,
     const uint32_t height
 ) {
@@ -548,7 +548,7 @@ void Stasis::VulkanRenderer::CreateSwapchain(
     swapchainImageViews = vkbSwapchain.get_image_views().value();
 }
 
-void Stasis::VulkanRenderer::DestroySwapchain()
+void Blackbox::VulkanRenderer::DestroySwapchain()
 {
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 
@@ -559,7 +559,7 @@ void Stasis::VulkanRenderer::DestroySwapchain()
     } 
 }
 
-void Stasis::VulkanRenderer::ImmediateSubmit(
+void Blackbox::VulkanRenderer::ImmediateSubmit(
     std::function<void(VkCommandBuffer)>&& callback
 ) {
     VK_CHECK(vkResetFences(device, 1, &immediateFence));
@@ -582,7 +582,7 @@ void Stasis::VulkanRenderer::ImmediateSubmit(
     VK_CHECK(vkWaitForFences(device, 1, &immediateFence, VK_TRUE, UINT64_MAX));
 }
 
-void Stasis::VulkanRenderer::InitImGui()
+void Blackbox::VulkanRenderer::InitImGui()
 {
     // 1: Create descriptor pool for ImGui
     // The size of the pool is very oversized, but it's copied from the ImGui demo itself

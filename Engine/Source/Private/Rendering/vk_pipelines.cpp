@@ -4,7 +4,7 @@
 #include <fstream>
 #include "vk_initializers.h"
 
-bool Stasis::vkutil::LoadShaderModule(
+bool Blackbox::vkutil::LoadShaderModule(
     const char* filePath,
     const VkDevice device,
     VkShaderModule* outShaderModule

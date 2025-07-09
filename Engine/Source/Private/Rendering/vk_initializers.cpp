@@ -1,6 +1,6 @@
 ﻿#include "vk_initializers.h"
 
-VkCommandPoolCreateInfo Stasis::vkinit::CommandPoolCreateInfo(
+VkCommandPoolCreateInfo Blackbox::vkinit::CommandPoolCreateInfo(
     const uint32_t queueFamilyIndex,
     const VkCommandPoolCreateFlags flags
 ) {
@@ -12,7 +12,7 @@ VkCommandPoolCreateInfo Stasis::vkinit::CommandPoolCreateInfo(
     };
 }
 
-VkCommandBufferAllocateInfo Stasis::vkinit::CommandBufferAllocateInfo(
+VkCommandBufferAllocateInfo Blackbox::vkinit::CommandBufferAllocateInfo(
     const VkCommandPool pool,
     const uint32_t count
 ) {
@@ -25,7 +25,7 @@ VkCommandBufferAllocateInfo Stasis::vkinit::CommandBufferAllocateInfo(
     };
 }
 
-VkCommandBufferBeginInfo Stasis::vkinit::CommandBufferBeginInfo(
+VkCommandBufferBeginInfo Blackbox::vkinit::CommandBufferBeginInfo(
     const VkCommandBufferUsageFlags flags
 ) {
     return VkCommandBufferBeginInfo
@@ -35,7 +35,7 @@ VkCommandBufferBeginInfo Stasis::vkinit::CommandBufferBeginInfo(
     };
 }
 
-VkFenceCreateInfo Stasis::vkinit::FenceCreateInfo(
+VkFenceCreateInfo Blackbox::vkinit::FenceCreateInfo(
     const VkFenceCreateFlags flags
 ) {
     return VkFenceCreateInfo
@@ -45,7 +45,7 @@ VkFenceCreateInfo Stasis::vkinit::FenceCreateInfo(
     };
 }
 
-VkSemaphoreCreateInfo Stasis::vkinit::SemaphoreCreateInfo(
+VkSemaphoreCreateInfo Blackbox::vkinit::SemaphoreCreateInfo(
     const VkSemaphoreCreateFlags flags
 ) {
     return VkSemaphoreCreateInfo
@@ -55,7 +55,7 @@ VkSemaphoreCreateInfo Stasis::vkinit::SemaphoreCreateInfo(
     };
 }
 
-VkSemaphoreSubmitInfo Stasis::vkinit::SemaphoreSubmitInfo(
+VkSemaphoreSubmitInfo Blackbox::vkinit::SemaphoreSubmitInfo(
     const VkPipelineStageFlags2 stageMask,
     const VkSemaphore semaphore
 ) {
@@ -69,7 +69,7 @@ VkSemaphoreSubmitInfo Stasis::vkinit::SemaphoreSubmitInfo(
     };
 }
 
-VkCommandBufferSubmitInfo Stasis::vkinit::CommandBufferSubmitInfo(
+VkCommandBufferSubmitInfo Blackbox::vkinit::CommandBufferSubmitInfo(
     const VkCommandBuffer commandBuffer
 ) {
 	return VkCommandBufferSubmitInfo
@@ -80,7 +80,7 @@ VkCommandBufferSubmitInfo Stasis::vkinit::CommandBufferSubmitInfo(
     };
 }
 
-VkSubmitInfo2 Stasis::vkinit::SubmitInfo(
+VkSubmitInfo2 Blackbox::vkinit::SubmitInfo(
     const VkCommandBufferSubmitInfo* commandBuffer,
     const VkSemaphoreSubmitInfo* signalSemaphoreInfo,
     const VkSemaphoreSubmitInfo* waitSemaphoreInfo
@@ -97,7 +97,7 @@ VkSubmitInfo2 Stasis::vkinit::SubmitInfo(
     };
 }
 
-VkPresentInfoKHR Stasis::vkinit::PresentInfo()
+VkPresentInfoKHR Blackbox::vkinit::PresentInfo()
 {
     return VkPresentInfoKHR
     {
@@ -107,7 +107,7 @@ VkPresentInfoKHR Stasis::vkinit::PresentInfo()
     };
 }
 
-VkRenderingAttachmentInfo Stasis::vkinit::AttachmentInfo(
+VkRenderingAttachmentInfo Blackbox::vkinit::AttachmentInfo(
     const VkImageView view,
     const VkClearValue* clear,
     const VkImageLayout layout
@@ -123,7 +123,7 @@ VkRenderingAttachmentInfo Stasis::vkinit::AttachmentInfo(
     };
 }
 
-VkRenderingAttachmentInfo Stasis::vkinit::DepthAttachmentInfo(
+VkRenderingAttachmentInfo Blackbox::vkinit::DepthAttachmentInfo(
     const VkImageView view,
     const VkImageLayout layout
 ) {
@@ -138,7 +138,7 @@ VkRenderingAttachmentInfo Stasis::vkinit::DepthAttachmentInfo(
     };
 }
 
-VkRenderingInfo Stasis::vkinit::RenderingInfo(
+VkRenderingInfo Blackbox::vkinit::RenderingInfo(
     const VkExtent2D renderExtent,
     const VkRenderingAttachmentInfo* colorAttachment,
     const VkRenderingAttachmentInfo* depthAttachment
@@ -154,7 +154,7 @@ VkRenderingInfo Stasis::vkinit::RenderingInfo(
     };
 }
 
-VkImageSubresourceRange Stasis::vkinit::ImageSubresourceRange(
+VkImageSubresourceRange Blackbox::vkinit::ImageSubresourceRange(
     const VkImageAspectFlags aspectMask
 ) {
     return VkImageSubresourceRange
@@ -167,7 +167,7 @@ VkImageSubresourceRange Stasis::vkinit::ImageSubresourceRange(
     };
 }
 
-VkDescriptorSetLayoutBinding Stasis::vkinit::DescriptorsetLayoutBinding(
+VkDescriptorSetLayoutBinding Blackbox::vkinit::DescriptorsetLayoutBinding(
     const VkDescriptorType type,
     const VkShaderStageFlags stageFlags,
     const uint32_t binding
@@ -181,7 +181,7 @@ VkDescriptorSetLayoutBinding Stasis::vkinit::DescriptorsetLayoutBinding(
     };
 }
 
-VkDescriptorSetLayoutCreateInfo Stasis::vkinit::DescriptorsetLayoutCreateInfo(
+VkDescriptorSetLayoutCreateInfo Blackbox::vkinit::DescriptorsetLayoutCreateInfo(
     const VkDescriptorSetLayoutBinding* bindings,
     const uint32_t bindingCount
 ) {
@@ -194,7 +194,7 @@ VkDescriptorSetLayoutCreateInfo Stasis::vkinit::DescriptorsetLayoutCreateInfo(
     };
 }
 
-VkWriteDescriptorSet Stasis::vkinit::WriteDescriptorImage(
+VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorImage(
     const VkDescriptorType type,
     const VkDescriptorSet dstSet,
     const VkDescriptorImageInfo* imageInfo,
@@ -211,7 +211,7 @@ VkWriteDescriptorSet Stasis::vkinit::WriteDescriptorImage(
     };
 }
 
-VkWriteDescriptorSet Stasis::vkinit::WriteDescriptorBuffer(
+VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorBuffer(
     const VkDescriptorType type,
     const VkDescriptorSet dstSet,
     const VkDescriptorBufferInfo* bufferInfo,
@@ -228,7 +228,7 @@ VkWriteDescriptorSet Stasis::vkinit::WriteDescriptorBuffer(
     };
 }
 
-VkDescriptorBufferInfo Stasis::vkinit::BufferInfo(
+VkDescriptorBufferInfo Blackbox::vkinit::BufferInfo(
     const VkBuffer buffer,
     const VkDeviceSize offset,
     const VkDeviceSize range
@@ -241,7 +241,7 @@ VkDescriptorBufferInfo Stasis::vkinit::BufferInfo(
     };
 }
 
-VkImageCreateInfo Stasis::vkinit::ImageCreateInfo(
+VkImageCreateInfo Blackbox::vkinit::ImageCreateInfo(
     const VkFormat format,
     const VkImageUsageFlags usageFlags,
     const VkExtent3D extent
@@ -260,7 +260,7 @@ VkImageCreateInfo Stasis::vkinit::ImageCreateInfo(
     };
 }
 
-VkImageViewCreateInfo Stasis::vkinit::ImageviewCreateInfo(
+VkImageViewCreateInfo Blackbox::vkinit::ImageviewCreateInfo(
     const VkFormat format,
     const VkImage image,
     const VkImageAspectFlags aspectFlags
@@ -282,7 +282,7 @@ VkImageViewCreateInfo Stasis::vkinit::ImageviewCreateInfo(
     };
 }
 
-VkPipelineLayoutCreateInfo Stasis::vkinit::PipelineLayoutCreateInfo()
+VkPipelineLayoutCreateInfo Blackbox::vkinit::PipelineLayoutCreateInfo()
 {
     return VkPipelineLayoutCreateInfo
     {
@@ -293,7 +293,7 @@ VkPipelineLayoutCreateInfo Stasis::vkinit::PipelineLayoutCreateInfo()
     };
 }
 
-VkPipelineShaderStageCreateInfo Stasis::vkinit::PipelineShaderStageCreateInfo(
+VkPipelineShaderStageCreateInfo Blackbox::vkinit::PipelineShaderStageCreateInfo(
     const VkShaderStageFlagBits stage,
     const VkShaderModule shaderModule,
     const char* entry

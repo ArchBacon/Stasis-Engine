@@ -11,7 +11,7 @@
 
 #include "Core/Types.hpp"
 
-namespace Stasis
+namespace Blackbox
 {
     struct DeletionQueue
     {

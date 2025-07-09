@@ -18,7 +18,7 @@
 
 #include "Blackbox.hpp"
 
-namespace Stasis
+namespace Blackbox
 {
     #define VK_CHECK(x)                                                             \
     do {                                                                            \
