@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include "vk_types.h"
 #include "vk_initializers.h"
+#include "vk_descriptors.h"
 #include <VkBootstrap.h>
 
 #include <ranges>
@@ -74,6 +75,14 @@ namespace Stasis
         // Draw resources
         AllocatedImage drawImage {};
         VkExtent2D drawExtent {};
+
+        // Descriptors
+        DescriptorAllocator globalDescriptorAllocator {};
+        VkDescriptorSet drawImageDescriptors {};
+        VkDescriptorSetLayout drawImageDescriptorLayout {};
+
+        VkPipeline gradientPipeline {};
+        VkPipelineLayout gradientPipelineLayout {};
     
     public:
         VulkanRenderer();
@@ -96,6 +105,9 @@ namespace Stasis
         void InitSwapchain();
         void InitCommands();
         void InitSyncStructures();
+        void InitDescriptors();
+        void InitPipelines();
+        void InitBackgroundPipelines();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
         void DestroySwapchain();

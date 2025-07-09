@@ -1,4 +1,6 @@
 ﻿#include "vk_pipelines.h"
+
+#include <filesystem>
 #include <fstream>
 #include "vk_initializers.h"
 
@@ -11,6 +13,8 @@ bool Stasis::vkutil::LoadShaderModule(
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
     if (!file.is_open())
     {
+        const std::filesystem::path absoluteFilePath = std::filesystem::absolute(filePath);
+        LogRenderer->Error("Failed to open shader file: {}", absoluteFilePath.string());
         return false;
     }
 
