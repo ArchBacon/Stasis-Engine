@@ -2,7 +2,8 @@
 #include <SDL3/SDL_vulkan.h>
 #include "vk_images.h"
 #define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+#include <vk_mem_alloc.h>
+#include "vk_pipelines.h"
 
 #ifdef NDEBUG
 constexpr bool USE_VALIDATION_LAYERS = false;
@@ -36,6 +37,8 @@ void Stasis::VulkanRenderer::Initialize()
     InitSwapchain();
     InitCommands();
     InitSyncStructures();
+    InitDescriptors();
+    InitPipelines();
 }
 
 void Stasis::VulkanRenderer::Shutdown()
@@ -152,14 +155,14 @@ void Stasis::VulkanRenderer::Draw()
 
 void Stasis::VulkanRenderer::DrawBackground(VkCommandBuffer commandBuffer)
 {
-    // Make a clear-color from the frame number. This will flash with a 120-frame period.
-    const float flash = std::abs(std::sin((float)frameNumber / 120.0f));
-    const VkClearColorValue clearValue {{0.0f, 0.0f, flash, 1.0f}};
+    // Bind the gradient drawing compute pipeline
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gradientPipeline);
 
-    const VkImageSubresourceRange clearRange = vkinit::ImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT);
+    // Bind the descriptor set container the draw image for the compute pipeline
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gradientPipelineLayout, 0, 1, &drawImageDescriptors, 0, nullptr);
 
-    // Clear image
-    vkCmdClearColorImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clearRange);
+    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
 
 void Stasis::VulkanRenderer::InitVulkan()
@@ -315,6 +318,97 @@ void Stasis::VulkanRenderer::InitSyncStructures()
     }
 }
 
+void Stasis::VulkanRenderer::InitDescriptors()
+{
+    // Create a descriptor pool that will hold 10 sets with 1 image each
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+    globalDescriptorAllocator.InitPool(device, 10, sizes);
+
+    // Make the descriptor set layout for our compute draw
+    {
+        DescriptorLayoutBuilder builder {};
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        drawImageDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_COMPUTE_BIT);
+    }
+
+    // Allocate a descriptor set for our draw image
+    drawImageDescriptors = globalDescriptorAllocator.Allocate(device, drawImageDescriptorLayout);
+
+    VkDescriptorImageInfo imageInfo
+    {
+        .imageView = drawImage.imageView,
+        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+    };
+
+    VkWriteDescriptorSet drawImageWrite
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = drawImageDescriptors,
+        .dstBinding = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &imageInfo,
+    };
+
+    vkUpdateDescriptorSets(device, 1, &drawImageWrite, 0, nullptr);
+
+    // Make sure both the descriptor allocators and the new layout get cleaned up properly
+    deletionQueue.Add([&]()
+    {
+        globalDescriptorAllocator.DestroyPool(device);
+        vkDestroyDescriptorSetLayout(device, drawImageDescriptorLayout, nullptr);
+    });
+}
+
+void Stasis::VulkanRenderer::InitPipelines()
+{
+    InitBackgroundPipelines();
+}
+
+void Stasis::VulkanRenderer::InitBackgroundPipelines()
+{
+    const VkPipelineLayoutCreateInfo computeLayout
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .setLayoutCount = 1,
+        .pSetLayouts = &drawImageDescriptorLayout,
+        .pPushConstantRanges = nullptr,
+    };
+
+    VK_CHECK(vkCreatePipelineLayout(device, &computeLayout, nullptr, &gradientPipelineLayout));
+
+    // Layout code
+    VkShaderModule computerDrawShader {};
+    if (!vkutil::LoadShaderModule("Shaders/gradient.comp.spv", device, &computerDrawShader))
+    {
+        LogRenderer->Error("Error when building the compute shader.");
+    }
+
+    const VkPipelineShaderStageCreateInfo shaderStageInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_COMPUTE_BIT,
+        .module = computerDrawShader,
+        .pName = "main",
+    };
+
+    const VkComputePipelineCreateInfo computePipelineInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+        .stage = shaderStageInfo,
+        .layout = gradientPipelineLayout,
+    };
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &gradientPipeline));
+
+    vkDestroyShaderModule(device, computerDrawShader, nullptr);
+    deletionQueue.Add([&]() {
+        vkDestroyPipeline(device, gradientPipeline, nullptr);
+        vkDestroyPipelineLayout(device, gradientPipelineLayout, nullptr);
+    });
+}
+
 void Stasis::VulkanRenderer::CreateSwapchain(
     const uint32_t width,
     const uint32_t height
@@ -323,7 +417,7 @@ void Stasis::VulkanRenderer::CreateSwapchain(
     swapchainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
     vkb::Swapchain vkbSwapchain = swapchainBuilder
-        .set_desired_format(VkSurfaceFormatKHR{.format = swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR })
+        .set_desired_format(VkSurfaceFormatKHR{.format = swapchainImageFormat, .colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
         .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR) // Use vsync present mode
         .set_desired_extent(width, height)
         .add_image_usage_flags(VK_IMAGE_USAGE_TRANSFER_DST_BIT)
