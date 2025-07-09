@@ -59,7 +59,7 @@ void Stasis::VulkanRenderer::Shutdown()
         vkDestroySemaphore(device, renderSemaphore, nullptr);
     }
 
-    mainDeletionQueue.Flush();
+    deletionQueue.Flush();
     
     DestroySwapchain();
 
@@ -227,7 +227,7 @@ void Stasis::VulkanRenderer::InitVulkan()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &allocator);
 
-    mainDeletionQueue.PushFunction([&]() {
+    deletionQueue.Add([&]() {
         vmaDestroyAllocator(allocator);
     });
 }
@@ -269,7 +269,7 @@ void Stasis::VulkanRenderer::InitSwapchain()
     VK_CHECK(vkCreateImageView(device, &drawViewInfo, nullptr, &drawImage.imageView));
 
     //add to deletion queues
-    mainDeletionQueue.PushFunction([=]() {
+    deletionQueue.Add([=]() {
         vkDestroyImageView(device, drawImage.imageView, nullptr);
         vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
     });

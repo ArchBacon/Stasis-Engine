@@ -12,20 +12,21 @@ namespace Stasis
 {
     struct DeletionQueue
     {
-        std::deque<std::function<void()>> deletors {};
+        std::deque<std::function<void()>> queue {};
 
-        void PushFunction(std::function<void()>&& callback) {
-            deletors.push_back(callback);
+        void Add(std::function<void()>&& callback)
+        {
+            queue.push_back(std::move(callback));
         }
 
         void Flush() {
             // Reverse iterate the deletion queue to execute all the functions
-            for (auto& callback : std::ranges::reverse_view(deletors))
+            for (auto& callback : std::ranges::reverse_view(queue))
             {
                 callback();
             }
 
-            deletors.clear();
+            queue.clear();
         }
     };
     
@@ -65,7 +66,7 @@ namespace Stasis
         VkQueue graphicsQueue {};
         uint32_t graphicsQueueFamily {};
 
-        DeletionQueue mainDeletionQueue {};
+        DeletionQueue deletionQueue {};
 
         // Allocators
         VmaAllocator allocator {};
