@@ -9,6 +9,8 @@
 
 #include <ranges>
 
+#include "Core/Types.hpp"
+
 namespace Stasis
 {
     struct DeletionQueue
@@ -38,6 +40,22 @@ namespace Stasis
         VkSemaphore swapchainSemaphore {};
         VkFence renderFence {};
         DeletionQueue deletionQueue {};
+    };
+
+    struct ComputePushConstants
+    {
+        float4 data1;
+        float4 data2;
+        float4 data3;
+        float4 data4;
+    };
+
+    struct ComputeEffect
+    {
+        const char* name {};
+        VkPipeline pipeline {};
+        VkPipelineLayout layout {};
+        ComputePushConstants data {};
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
@@ -83,6 +101,14 @@ namespace Stasis
 
         VkPipeline gradientPipeline {};
         VkPipelineLayout gradientPipelineLayout {};
+
+        // Immediate submit structured
+        VkFence immediateFence {};
+        VkCommandBuffer immediateCommandBuffer {};
+        VkCommandPool immediateCommandPool {};
+
+        std::vector<ComputeEffect> backgroundEffects {};
+        int currentComputeEffectIndex {0};
     
     public:
         VulkanRenderer();
@@ -99,6 +125,7 @@ namespace Stasis
 
     public:
         void Draw();
+        void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
         
     private:
         void InitVulkan();
@@ -113,5 +140,8 @@ namespace Stasis
         void DestroySwapchain();
 
         void DrawBackground(VkCommandBuffer commandBuffer);
+
+        void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
+        void InitImGui();
     };
 }

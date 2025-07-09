@@ -4,6 +4,9 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 #include "vk_pipelines.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl3.h"
+#include "imgui/imgui_impl_vulkan.h"
 
 #ifdef NDEBUG
 constexpr bool USE_VALIDATION_LAYERS = false;
@@ -39,6 +42,7 @@ void Stasis::VulkanRenderer::Initialize()
     InitSyncStructures();
     InitDescriptors();
     InitPipelines();
+    InitImGui();
 }
 
 void Stasis::VulkanRenderer::Shutdown()
@@ -76,6 +80,28 @@ void Stasis::VulkanRenderer::Shutdown()
 
 void Stasis::VulkanRenderer::Draw()
 {
+    // --------------- IMGUI START ---------------
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    if (ImGui::Begin("Background"))
+    {
+        ComputeEffect& selected = backgroundEffects[currentComputeEffectIndex];
+
+        ImGui::Text("Selected effect: ", selected.name);
+        ImGui::SliderInt("Effect index", &currentComputeEffectIndex, 0, backgroundEffects.size() - 1);
+
+        ImGui::InputFloat4("data1", reinterpret_cast<float*>(&selected.data.data1));
+        ImGui::InputFloat4("data2", reinterpret_cast<float*>(&selected.data.data2));
+        ImGui::InputFloat4("data3", reinterpret_cast<float*>(&selected.data.data3));
+        ImGui::InputFloat4("data4", reinterpret_cast<float*>(&selected.data.data4));
+    }
+    ImGui::End();
+
+    ImGui::Render();
+    // --------------- IMGUI END ---------------
+    
     constexpr uint32_t singleSecond = 1000000000;
     
     // Wait until the GPU has finished rendering the last frame. Timeout of one second
@@ -115,9 +141,15 @@ void Stasis::VulkanRenderer::Draw()
     // execute a copy from the draw image into the swapchain
     vkutil::CopyImageToImage(commandBuffer, drawImage.image, swapchainImages[swapchainImageIndex], drawExtent, swapchainExtent);
 
-    // set swapchain image layout to Present so we can show it on the screen
-    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    // set swapchain image layout to Attachment Optimal so we can draw it
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+    //draw imgui into the swapchain image
+    DrawImGui(commandBuffer,  swapchainImageViews[swapchainImageIndex]);
+    
+    // set swapchain image layout to Present so we can show it on the screen
+    vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    
     //finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(commandBuffer));
 
@@ -153,14 +185,36 @@ void Stasis::VulkanRenderer::Draw()
     frameNumber++;
 }
 
-void Stasis::VulkanRenderer::DrawBackground(VkCommandBuffer commandBuffer)
-{
+void Stasis::VulkanRenderer::DrawImGui(
+    VkCommandBuffer commandBuffer,
+    VkImageView targetImageView
+) {
+    VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = vkinit::RenderingInfo(swapchainExtent, &colorAttachmentInfo, nullptr);
+
+    vkCmdBeginRendering(commandBuffer, &renderInfo);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+    vkCmdEndRendering(commandBuffer);
+}
+
+void Stasis::VulkanRenderer::DrawBackground(
+    VkCommandBuffer commandBuffer
+) {
+    ComputeEffect& effect = backgroundEffects[currentComputeEffectIndex];
+    
     // Bind the gradient drawing compute pipeline
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gradientPipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, effect.pipeline);
 
     // Bind the descriptor set container the draw image for the compute pipeline
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, gradientPipelineLayout, 0, 1, &drawImageDescriptors, 0, nullptr);
 
+    ComputePushConstants pushConstants
+    {
+        .data1 = float4(1, 0, 0, 1),
+        .data2 = float4(0, 0, 1, 1),
+    };
+    vkCmdPushConstants(commandBuffer, gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pushConstants), &effect.data);
+    
     // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
     vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
@@ -293,6 +347,17 @@ void Stasis::VulkanRenderer::InitCommands()
 
         VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferAllocInfo, &frame.commandBuffer));
     }
+
+    VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &immediateCommandPool));
+
+    // Allocate the command buffer for immediate submits
+    VkCommandBufferAllocateInfo commandAllocInfo = vkinit::CommandBufferAllocateInfo(immediateCommandPool, 1);
+    VK_CHECK(vkAllocateCommandBuffers(device, &commandAllocInfo, &immediateCommandBuffer));
+
+    deletionQueue.Add([=]()
+    {
+        vkDestroyCommandPool(device, immediateCommandPool, nullptr);
+    });
 }
 
 void Stasis::VulkanRenderer::InitSyncStructures()
@@ -316,6 +381,12 @@ void Stasis::VulkanRenderer::InitSyncStructures()
     {
         VK_CHECK(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &renderSemaphore));
     }
+
+    VK_CHECK(vkCreateFence(device, &fenceCreateInfo, nullptr, &immediateFence));
+    deletionQueue.Add([=]()
+    {
+        vkDestroyFence(device, immediateFence, nullptr);
+    });
 }
 
 void Stasis::VulkanRenderer::InitDescriptors()
@@ -367,45 +438,92 @@ void Stasis::VulkanRenderer::InitPipelines()
 
 void Stasis::VulkanRenderer::InitBackgroundPipelines()
 {
+    constexpr VkPushConstantRange pushConstants
+    {
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .offset = 0,
+        .size = sizeof(ComputePushConstants),
+    };
+
     const VkPipelineLayoutCreateInfo computeLayout
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .pNext = nullptr,
         .setLayoutCount = 1,
         .pSetLayouts = &drawImageDescriptorLayout,
-        .pPushConstantRanges = nullptr,
+        .pushConstantRangeCount = 1,
+        .pPushConstantRanges = &pushConstants,
     };
 
     VK_CHECK(vkCreatePipelineLayout(device, &computeLayout, nullptr, &gradientPipelineLayout));
 
     // Layout code
-    VkShaderModule computerDrawShader {};
-    if (!vkutil::LoadShaderModule("Shaders/gradient.comp.spv", device, &computerDrawShader))
+    VkShaderModule gradientShader {};
+    if (!vkutil::LoadShaderModule("Shaders/gradient_color.comp", device, &gradientShader))
     {
-        LogRenderer->Error("Error when building the compute shader.");
+        LogRenderer->Error("Error when building the compute shader. Shader: {}", "gradient_color.comp");
+    }
+    
+    VkShaderModule skyShader {};
+    if (!vkutil::LoadShaderModule("Shaders/sky.comp", device, &skyShader))
+    {
+        LogRenderer->Error("Error when building the compute shader. Shader: {}", "sky.comp");
     }
 
     const VkPipelineShaderStageCreateInfo shaderStageInfo
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
-        .module = computerDrawShader,
+        .module = gradientShader,
         .pName = "main",
     };
 
-    const VkComputePipelineCreateInfo computePipelineInfo
+    VkComputePipelineCreateInfo computePipelineInfo
     {
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .stage = shaderStageInfo,
         .layout = gradientPipelineLayout,
     };
 
-    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &gradientPipeline));
+    ComputeEffect gradient
+    {
+        .name = "gradient",
+        .layout = gradientPipelineLayout,
+        .data =
+        {
+            .data1 = float4(1, 0, 0, 1), 
+            .data2 = float4(0, 0, 1, 1),
+        },
+    };
 
-    vkDestroyShaderModule(device, computerDrawShader, nullptr);
-    deletionQueue.Add([&]() {
-        vkDestroyPipeline(device, gradientPipeline, nullptr);
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &gradient.pipeline));
+
+    // Change the shader module only to create the sky shader
+    computePipelineInfo.stage.module = skyShader;
+
+    ComputeEffect sky
+    {
+        .name = "sky",
+        .layout = gradientPipelineLayout,
+        .data =
+        {
+            .data1 = float4(0.1, 0.2, 0.4, 0.97), 
+        },
+    };
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &computePipelineInfo, nullptr, &sky.pipeline));
+
+    // Add the two background effects into the array
+    backgroundEffects.push_back(gradient);
+    backgroundEffects.push_back(sky);
+
+    // Clean up
+    vkDestroyShaderModule(device, gradientShader, nullptr);
+    vkDestroyShaderModule(device, skyShader, nullptr);
+    
+    deletionQueue.Add([=]() {
         vkDestroyPipelineLayout(device, gradientPipelineLayout, nullptr);
+        vkDestroyPipeline(device, gradient.pipeline, nullptr);
+        vkDestroyPipeline(device, sky.pipeline, nullptr);
     });
 }
 
@@ -439,4 +557,93 @@ void Stasis::VulkanRenderer::DestroySwapchain()
     {
         vkDestroyImageView(device, swapchainImageView, nullptr);
     } 
+}
+
+void Stasis::VulkanRenderer::ImmediateSubmit(
+    std::function<void(VkCommandBuffer)>&& callback
+) {
+    VK_CHECK(vkResetFences(device, 1, &immediateFence));
+    VK_CHECK(vkResetCommandBuffer(immediateCommandBuffer, 0));
+
+    VkCommandBuffer commandBuffer = immediateCommandBuffer;
+    VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+
+    callback(commandBuffer);
+
+    VK_CHECK(vkEndCommandBuffer(commandBuffer));
+
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo = vkinit::CommandBufferSubmitInfo(commandBuffer);
+    VkSubmitInfo2 submit = vkinit::SubmitInfo(&commandBufferSubmitInfo, nullptr, nullptr);
+
+    // Submit command buffer to the queue and execute it
+    // renderFence will now block until the graphic commands finish execution
+    VK_CHECK(vkQueueSubmit2(graphicsQueue, 1, &submit, immediateFence));
+    VK_CHECK(vkWaitForFences(device, 1, &immediateFence, VK_TRUE, UINT64_MAX));
+}
+
+void Stasis::VulkanRenderer::InitImGui()
+{
+    // 1: Create descriptor pool for ImGui
+    // The size of the pool is very oversized, but it's copied from the ImGui demo itself
+    VkDescriptorPoolSize poolSizes[] = {
+        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
+    };
+
+    const VkDescriptorPoolCreateInfo poolInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+        .maxSets = 1000,
+        .poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
+        .pPoolSizes = poolSizes,
+    };
+
+    VkDescriptorPool imguiPool {};
+    VK_CHECK(vkCreateDescriptorPool(device, &poolInfo, nullptr, &imguiPool));
+
+    // 2: Initialize ImGui library
+    // This initialized the core structures of ImGui
+    ImGui::CreateContext();
+
+    // This initialized ImGui for SDL
+    ImGui_ImplSDL3_InitForVulkan(window);
+
+    // This initialized ImGui for Vulkan
+    ImGui_ImplVulkan_InitInfo initInfo
+    {
+        .Instance = instance,
+        .PhysicalDevice = selectedGPU,
+        .Device = device,
+        .Queue = graphicsQueue,
+        .DescriptorPool = imguiPool,
+        .MinImageCount = 3,
+        .ImageCount = 3,
+        .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+        .UseDynamicRendering = true,
+        
+        // Dynamic rendering parameters for ImGui to use
+        .PipelineRenderingCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+            .colorAttachmentCount = 1,
+            .pColorAttachmentFormats = &swapchainImageFormat,
+        },
+    };
+
+    ImGui_ImplVulkan_Init(&initInfo);
+
+    deletionQueue.Add([=]() {
+        ImGui_ImplVulkan_Shutdown();
+        vkDestroyDescriptorPool(device, imguiPool, nullptr);
+    });
 }

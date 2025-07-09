@@ -10,7 +10,7 @@ bool Stasis::vkutil::LoadShaderModule(
     VkShaderModule* outShaderModule
 ) {
     // Open the file, with the cursor at the end
-    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+    std::ifstream file(std::string(filePath) + ".spv", std::ios::ate | std::ios::binary);
     if (!file.is_open())
     {
         const std::filesystem::path absoluteFilePath = std::filesystem::absolute(filePath);
