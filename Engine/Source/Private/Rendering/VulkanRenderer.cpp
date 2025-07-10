@@ -694,14 +694,14 @@ void Blackbox::VulkanRenderer::InitMeshPipeline()
     VkShaderModule triangleFragShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
     {
-        LogRenderer->Error("Error when building the triangle fragment shader.");
+        LogRenderer->Error("Error when building the mesh fragment shader.");
     }
     LogRenderer->Info("Triangle fragment shader successfully loaded.");
 
     VkShaderModule triangleVertShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle_mesh.vert", device, &triangleVertShader))
     {
-        LogRenderer->Error("Error when building the triangle vertex shader.");
+        LogRenderer->Error("Error when building the mesh vertex shader.");
     }
     LogRenderer->Info("Triangle vertex shader successfully loaded.");
 
