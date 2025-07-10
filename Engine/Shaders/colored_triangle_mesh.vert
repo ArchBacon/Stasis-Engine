@@ -13,7 +13,7 @@ struct Vertex
     vec3 color;
 };
 
-layout (buffer_Reference, std430) readonly buffer VertexBuffer
+layout (buffer_reference, std430) readonly buffer VertexBuffer
 {
     Vertex vertices[];
 };
