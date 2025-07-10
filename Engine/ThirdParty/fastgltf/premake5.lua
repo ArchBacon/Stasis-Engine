@@ -4,8 +4,8 @@ project "fastgltf"
     cppdialect "C++20"
     staticruntime "on"
 
-    targetdir ("%{wks.location}Binaries/" .. outputdir .. "/Engine")
-    objdir ("%{wks.location}Intermediate/" .. outputdir .. "/Engine")
+    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/Engine")
+    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/Engine")
     
     files {
         "include/**",

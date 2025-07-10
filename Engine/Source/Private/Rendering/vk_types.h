@@ -17,6 +17,7 @@
 #include <glm/vec4.hpp>
 
 #include "Blackbox.hpp"
+#include "Core/Types.hpp"
 
 namespace Blackbox
 {
@@ -36,5 +37,36 @@ namespace Blackbox
         VmaAllocation allocation {};
         VkExtent3D imageExtent {};
         VkFormat imageFormat {};
+    };
+
+    struct AllocatedBuffer
+    {
+        VkBuffer buffer {};
+        VmaAllocation allocation {};
+        VmaAllocationInfo info {};
+    };
+
+    struct Vertex
+    {
+        float3 position {};
+        float uvX {};
+        float3 normal {};
+        float uvY {};
+        float4 color {};
+    };
+
+    // Holds the resources needed for a mesh
+    struct GPUMeshBuffers
+    {
+        AllocatedBuffer indexBuffer {};
+        AllocatedBuffer vertexBuffer {};
+        VkDeviceAddress vertexBufferAddress {};
+    };
+
+    // Push constants for our mesh object draws
+    struct GPUDrawPushConstants
+    {
+        mat4 worldMatrix {};
+        VkDeviceAddress vertexBuffer {};
     };
 }

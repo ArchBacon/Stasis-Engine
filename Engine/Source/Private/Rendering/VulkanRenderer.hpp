@@ -112,6 +112,11 @@ namespace Blackbox
 
         VkPipelineLayout trianglePipelineLayout {};
         VkPipeline trianglePipeline {};
+
+        VkPipelineLayout meshPipelineLayout {};
+        VkPipeline meshPipeline {};
+
+        GPUMeshBuffers rectangle {};
     
     public:
         VulkanRenderer();
@@ -128,6 +133,8 @@ namespace Blackbox
 
     public:
         void Draw();
+
+        GPUMeshBuffers UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
         
     private:
         void InitVulkan();
@@ -138,6 +145,9 @@ namespace Blackbox
         void InitPipelines();
         void InitBackgroundPipelines();
         void InitTrianglePipeline();
+        void InitMeshPipeline();
+        
+        void InitDefaultData();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
         void DestroySwapchain();
@@ -148,5 +158,8 @@ namespace Blackbox
         
         void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
         void InitImGui();
+
+        AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+        void DestroyBuffer(const AllocatedBuffer& buffer);
     };
 }
