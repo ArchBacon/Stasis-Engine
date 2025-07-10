@@ -109,6 +109,9 @@ namespace Blackbox
 
         std::vector<ComputeEffect> backgroundEffects {};
         int currentComputeEffectIndex {0};
+
+        VkPipelineLayout trianglePipelineLayout {};
+        VkPipeline trianglePipeline {};
     
     public:
         VulkanRenderer();
@@ -125,7 +128,6 @@ namespace Blackbox
 
     public:
         void Draw();
-        void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
         
     private:
         void InitVulkan();
@@ -135,12 +137,15 @@ namespace Blackbox
         void InitDescriptors();
         void InitPipelines();
         void InitBackgroundPipelines();
+        void InitTrianglePipeline();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
         void DestroySwapchain();
 
         void DrawBackground(VkCommandBuffer commandBuffer);
-
+        void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
+        void DrawGeometry(VkCommandBuffer commandBuffer);
+        
         void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
         void InitImGui();
     };

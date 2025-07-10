@@ -136,8 +136,12 @@ void Blackbox::VulkanRenderer::Draw()
 
     DrawBackground(commandBuffer);
 
+    vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    DrawGeometry(commandBuffer);
+    
     //transition the draw image and the swapchain image into their correct transfer layouts
-    vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     vkutil::TransitionImage(commandBuffer, swapchainImages[swapchainImageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     // execute a copy from the draw image into the swapchain
@@ -196,6 +200,38 @@ void Blackbox::VulkanRenderer::DrawImGui(
 
     vkCmdBeginRendering(commandBuffer, &renderInfo);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+    vkCmdEndRendering(commandBuffer);
+}
+
+void Blackbox::VulkanRenderer::DrawGeometry(
+    VkCommandBuffer commandBuffer
+) {
+    // Begin a render pass connected to our draw image
+    VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    VkRenderingInfo renderInfo = vkinit::RenderingInfo(drawExtent, &colorAttachmentInfo, nullptr);
+    vkCmdBeginRendering(commandBuffer, &renderInfo);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
+
+    // Set dynamic viewport and scissor
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float)drawExtent.width;
+    viewport.height = (float)drawExtent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor = {};
+    scissor.offset = {0, 0};
+    scissor.extent = drawExtent;
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    // Launch a draw command to draw 3 vertices
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
     vkCmdEndRendering(commandBuffer);
 }
 
@@ -436,6 +472,7 @@ void Blackbox::VulkanRenderer::InitDescriptors()
 void Blackbox::VulkanRenderer::InitPipelines()
 {
     InitBackgroundPipelines();
+    InitTrianglePipeline();
 }
 
 void Blackbox::VulkanRenderer::InitBackgroundPipelines()
@@ -526,6 +563,54 @@ void Blackbox::VulkanRenderer::InitBackgroundPipelines()
         vkDestroyPipelineLayout(device, gradientPipelineLayout, nullptr);
         vkDestroyPipeline(device, gradient.pipeline, nullptr);
         vkDestroyPipeline(device, sky.pipeline, nullptr);
+    });
+}
+
+void Blackbox::VulkanRenderer::InitTrianglePipeline()
+{
+    VkShaderModule triangleFragShader {};
+    if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
+    {
+        LogRenderer->Error("Error when building the triangle fragment shader.");
+    }
+    LogRenderer->Info("Triangle fragment shader successfully loaded.");
+
+    VkShaderModule triangleVertShader {};
+    if (!vkutil::LoadShaderModule("Shaders/colored_triangle.vert", device, &triangleVertShader))
+    {
+        LogRenderer->Error("Error when building the triangle vertex shader.");
+    }
+    LogRenderer->Info("Triangle vertex shader successfully loaded.");
+
+    // Build the pipeline layout that controls the inputs/outputs of the shader
+    // We are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
+    VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &trianglePipelineLayout));
+
+    PipelineBuilder pipelineBuilder {};
+    pipelineBuilder.pipelineLayout = trianglePipelineLayout;
+    pipelineBuilder.SetShaders(triangleVertShader, triangleFragShader);
+    pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+    pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipelineBuilder.SetMultisamplingNone();
+    pipelineBuilder.DisableBlending();
+    pipelineBuilder.DisableDepthTest();
+
+    // Connect the image format we will draw into, from draw image
+    pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);
+    pipelineBuilder.SetDepthFormat(VK_FORMAT_UNDEFINED);
+
+    // Finally, build the pipeline
+    trianglePipeline = pipelineBuilder.Build(device);
+
+    // Clean structures
+    vkDestroyShaderModule(device, triangleFragShader, nullptr);
+    vkDestroyShaderModule(device, triangleVertShader, nullptr);
+    deletionQueue.Add([&]()
+    {
+        vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr);
+        vkDestroyPipeline(device, trianglePipeline, nullptr);
     });
 }
 
