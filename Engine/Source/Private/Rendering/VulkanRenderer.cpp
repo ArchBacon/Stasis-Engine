@@ -369,6 +369,7 @@ void Blackbox::VulkanRenderer::InitVulkan()
         .set_required_features_13(vk13Features)
         .set_required_features_12(vk12Features)
         .set_surface(surface)
+        .add_required_extension(VK_KHR_SHADER_RELAXED_EXTENDED_INSTRUCTION_EXTENSION_NAME)
         .select()
         .value();
 
