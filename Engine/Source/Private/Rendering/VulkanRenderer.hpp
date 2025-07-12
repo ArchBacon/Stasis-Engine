@@ -113,13 +113,8 @@ namespace blackbox
         std::vector<ComputeEffect> backgroundEffects {};
         int currentComputeEffectIndex {0};
 
-        VkPipelineLayout trianglePipelineLayout {};
-        VkPipeline trianglePipeline {};
-
         VkPipelineLayout meshPipelineLayout {};
         VkPipeline meshPipeline {};
-
-        GPUMeshBuffers rectangle {};
 
         std::vector<std::shared_ptr<MeshAsset>> testMeshes {};
     
@@ -149,7 +144,6 @@ namespace blackbox
         void InitDescriptors();
         void InitPipelines();
         void InitBackgroundPipelines();
-        void InitTrianglePipeline();
         void InitMeshPipeline();
         
         void InitDefaultData();

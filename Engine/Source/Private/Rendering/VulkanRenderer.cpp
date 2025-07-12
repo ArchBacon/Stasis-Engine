@@ -209,7 +209,7 @@ blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
 
     GPUMeshBuffers newSurface {};
     
-    // Create vertex buffer
+    // Create a vertex buffer
     newSurface.vertexBuffer = CreateBuffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
 
     // Find the address of the vertex buffer
@@ -230,7 +230,7 @@ blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
     // Copy vertex buffer
     memcpy(data, vertices.data(), vertexBufferSize);
     // Copy index buffer
-    memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
+    memcpy(static_cast<char*>(data) + vertexBufferSize, indices.data(), indexBufferSize);
 
     ImmediateSubmit([&](const VkCommandBuffer commandBuffer)
     {
@@ -278,7 +278,7 @@ void blackbox::VulkanRenderer::DrawGeometry(
     VkRenderingInfo renderInfo = vkinit::RenderingInfo(drawExtent, &colorAttachmentInfo, &depthAttachment);
     vkCmdBeginRendering(commandBuffer, &renderInfo);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
 
     // Set dynamic viewport and scissor
     const VkViewport viewport
@@ -299,16 +299,11 @@ void blackbox::VulkanRenderer::DrawGeometry(
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    // Launch a draw command to draw 3 vertices
-    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
-
     static float rotation = 0.0f;
     rotation += 1.0f;
     
     mat4 view = translate(mat4(1.0f), float3{0.0f, 0.0f, -5.f});
-    mat4 projection = perspective(radians(70.0f), (float)drawExtent.width / (float)drawExtent.height, 0.1f, 10000.0f);
+    mat4 projection = perspective(radians(70.0f), static_cast<float>(drawExtent.width) / static_cast<float>(drawExtent.height), 0.1f, 10000.0f);
     // Invert the Y-direction on the projection matrix so that we are more similar to opengl and gltf axis
     projection[1][1] *= -1;
 
@@ -344,7 +339,7 @@ void blackbox::VulkanRenderer::DrawBackground(
     };
     vkCmdPushConstants(commandBuffer, gradientPipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pushConstants), &effect.data);
     
-    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+    // Execute the compute pipeline dispatch. We are using 16x16 workgroup size, so we need to divide by it
     vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
 
@@ -445,7 +440,7 @@ void blackbox::VulkanRenderer::InitSwapchain()
     // For the draw image, we want to allocate it from gpu local memory
     VmaAllocationCreateInfo drawImageAllocInfo {};
     drawImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    drawImageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    drawImageAllocInfo.requiredFlags = static_cast<VkMemoryPropertyFlags>(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     // Allocate and create the image
     vmaCreateImage(allocator, &drawImageInfo, &drawImageAllocInfo, &drawImage.image, &drawImage.allocation, nullptr);
@@ -541,10 +536,10 @@ void blackbox::VulkanRenderer::InitSyncStructures()
 void blackbox::VulkanRenderer::InitDescriptors()
 {
     // Create a descriptor pool that will hold 10 sets with 1 image each
-    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .ratio = 1}};
     globalDescriptorAllocator.InitPool(device, 10, sizes);
 
-    // Make the descriptor set layout for our compute draw
+    // Make the descriptor set a layout for our compute draw
     {
         DescriptorLayoutBuilder builder {};
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
@@ -586,7 +581,6 @@ void blackbox::VulkanRenderer::InitPipelines()
     InitBackgroundPipelines();
 
     // Graphics pipelines
-    InitTrianglePipeline();
     InitMeshPipeline();
 }
 
@@ -681,54 +675,6 @@ void blackbox::VulkanRenderer::InitBackgroundPipelines()
     });
 }
 
-void blackbox::VulkanRenderer::InitTrianglePipeline()
-{
-    VkShaderModule triangleFragShader {};
-    if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
-    {
-        LogRenderer->Error("Error when building the triangle fragment shader.");
-    }
-    LogRenderer->Trace("Triangle fragment shader successfully loaded.");
-
-    VkShaderModule triangleVertShader {};
-    if (!vkutil::LoadShaderModule("Shaders/colored_triangle.vert", device, &triangleVertShader))
-    {
-        LogRenderer->Error("Error when building the triangle vertex shader.");
-    }
-    LogRenderer->Trace("Triangle vertex shader successfully loaded.");
-
-    // Build the pipeline layout that controls the inputs/outputs of the shader
-    // We are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
-    VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &trianglePipelineLayout));
-
-    PipelineBuilder pipelineBuilder {};
-    pipelineBuilder.pipelineLayout = trianglePipelineLayout;
-    pipelineBuilder.SetShaders(triangleVertShader, triangleFragShader);
-    pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
-    pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
-    pipelineBuilder.SetMultisamplingNone();
-    pipelineBuilder.DisableBlending();
-    pipelineBuilder.DisableDepthTest();
-
-    // Connect the image format we will draw into, from draw image
-    pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);
-    pipelineBuilder.SetDepthFormat(depthImage.imageFormat);
-
-    // Finally, build the pipeline
-    trianglePipeline = pipelineBuilder.Build(device);
-
-    // Clean structures
-    vkDestroyShaderModule(device, triangleFragShader, nullptr);
-    vkDestroyShaderModule(device, triangleVertShader, nullptr);
-    deletionQueue.Add([&]()
-    {
-        vkDestroyPipelineLayout(device, trianglePipelineLayout, nullptr);
-        vkDestroyPipeline(device, trianglePipeline, nullptr);
-    });
-}
-
 void blackbox::VulkanRenderer::InitMeshPipeline()
 {
     VkShaderModule triangleFragShader {};
@@ -787,37 +733,6 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
 
 void blackbox::VulkanRenderer::InitDefaultData()
 {
-    std::array<Vertex, 4> rectVertices {};
-
-    rectVertices[0].position = {0.5,-0.5, 0};
-    rectVertices[1].position = {0.5,0.5, 0};
-    rectVertices[2].position = {-0.5,-0.5, 0};
-    rectVertices[3].position = {-0.5,0.5, 0};
-
-    rectVertices[0].color = {0,0, 0,1};
-    rectVertices[1].color = { 0.5,0.5,0.5 ,1};
-    rectVertices[2].color = { 1,0, 0,1 };
-    rectVertices[3].color = { 0,1, 0,1 };
-
-    std::array<uint32_t,6> rectIndices {};
-
-    rectIndices[0] = 0;
-    rectIndices[1] = 1;
-    rectIndices[2] = 2;
-
-    rectIndices[3] = 2;
-    rectIndices[4] = 1;
-    rectIndices[5] = 3;
-
-    rectangle = UploadMesh(rectIndices, rectVertices);
-
-    // Delete the rectangle data on engine shutdown
-    deletionQueue.Add([&]()
-    {
-        DestroyBuffer(rectangle.indexBuffer);
-        DestroyBuffer(rectangle.vertexBuffer);
-    });
-
     testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
 }
 
