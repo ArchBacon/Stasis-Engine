@@ -7,6 +7,7 @@
 #pragma warning(pop)
 #include "vk_loader.h"
 #include "vk_pipelines.h"
+#include "glm/ext/matrix_clip_space.hpp"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl3.h"
 #include "imgui/imgui_impl_vulkan.h"
@@ -269,8 +270,7 @@ void blackbox::VulkanRenderer::DrawImGui(
 
 void blackbox::VulkanRenderer::DrawGeometry(
     const VkCommandBuffer commandBuffer
-)
-{
+) {
     // Begin a render pass connected to our draw image
     VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -303,9 +303,17 @@ void blackbox::VulkanRenderer::DrawGeometry(
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
 
+    static float rotation = 0.0f;
+    rotation += 1.0f;
+    
+    mat4 view = translate(mat4(1.0f), float3{0.0f, 0.0f, -5.f});
+    mat4 projection = perspective(radians(70.0f), (float)drawExtent.width / (float)drawExtent.height, 0.1f, 10000.0f);
+    // Invert the Y-direction on the projection matrix so that we are more similar to opengl and gltf axis
+    projection[1][1] *= -1;
+
     const GPUDrawPushConstants pushConstants
     {
-        .worldMatrix = mat4(1.f),
+        .worldMatrix = projection * view,
         .vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress,
     };
 

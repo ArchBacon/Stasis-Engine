@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "glm/ext/matrix_transform.hpp"
 
 namespace blackbox
 {
@@ -19,7 +20,11 @@ namespace blackbox
     using float3 = glm::vec3;
     using float4 = glm::vec4;
 
-    // matrices
-    using mat4 = glm::mat4;
-    
+    // doubles
+    using double2 = glm::dvec2;
+    using double3 = glm::dvec3;
+    using double4 = glm::dvec4;
+
+    // include the rest of glm
+    using namespace glm;
 }
