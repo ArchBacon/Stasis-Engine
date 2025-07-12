@@ -103,11 +103,11 @@ void blackbox::VulkanRenderer::Draw()
 
     if (ImGui::Begin("Background"))
     {
-        ImGui::SliderFloat("Render scale", &renderScale, 0.3f, 1.0f);
+        ImGui::SliderFloat("Render scale", &renderScale, 0.1f, 1.0f);
         
         ComputeEffect& selected = backgroundEffects[currentComputeEffectIndex];
 
-        ImGui::Text("Selected effect: ", selected.name);
+        ImGui::Text("Selected effect: %s", selected.name);
         ImGui::SliderInt("Effect index", &currentComputeEffectIndex, 0, static_cast<int>(backgroundEffects.size() - 1));
 
         ImGui::InputFloat4("data1", reinterpret_cast<float*>(&selected.data.data1));
@@ -124,7 +124,10 @@ void blackbox::VulkanRenderer::Draw()
     
     // Wait until the GPU has finished rendering the last frame. Timeout of one second
     VK_CHECK(vkWaitForFences(device, 1, &GetCurrentFrame().renderFence, true, singleSecond));
-    GetCurrentFrame().deletionQueue.Flush();    
+    
+    GetCurrentFrame().deletionQueue.Flush();
+    GetCurrentFrame().frameDescriptor.ClearPools(device);
+    
     VK_CHECK(vkResetFences(device, 1, &GetCurrentFrame().renderFence));
 
     // Request image from the swapchain
@@ -158,6 +161,7 @@ void blackbox::VulkanRenderer::Draw()
     DrawBackground(commandBuffer);
 
     vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    vkutil::TransitionImage(commandBuffer, depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
     DrawGeometry(commandBuffer);
     
@@ -333,6 +337,26 @@ void blackbox::VulkanRenderer::DrawGeometry(
     vkCmdBindIndexBuffer(commandBuffer, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(commandBuffer, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
+
+    // Allocate a new uniform buffer for the scene data
+    AllocatedBuffer gpuSceneDataBuffer = CreateBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    // Add it to the deletion queue of this frame so it gets deleted once it's been used
+    GetCurrentFrame().deletionQueue.Add([=, this]()
+    {
+        DestroyBuffer(gpuSceneDataBuffer);
+    });
+
+    // Write the buffer
+    GPUSceneData* sceneUniformData = (GPUSceneData*)gpuSceneDataBuffer.allocation->GetMappedData();
+    *sceneUniformData = sceneData;
+
+    // Create a descriptor set that binds that buffer and update it
+    VkDescriptorSet globalDescriptor = GetCurrentFrame().frameDescriptor.Allocate(device, gpuSceneDataDescriptorLayout);
+
+    DescriptorWriter writer {};
+    writer.WriteBuffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    writer.UpdateSet(device, globalDescriptor);
     
     vkCmdEndRendering(commandBuffer);
 }
@@ -552,7 +576,10 @@ void blackbox::VulkanRenderer::InitSyncStructures()
 void blackbox::VulkanRenderer::InitDescriptors()
 {
     // Create a descriptor pool that will hold 10 sets with 1 image each
-    std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .ratio = 1}};
+    std::vector<DescriptorAllocator::PoolSizeRatio> sizes
+    {
+        {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .ratio = 1},
+    };
     globalDescriptorAllocator.InitPool(device, 10, sizes);
 
     // Make the descriptor set a layout for our compute draw
@@ -561,34 +588,48 @@ void blackbox::VulkanRenderer::InitDescriptors()
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         drawImageDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_COMPUTE_BIT);
     }
+    {
+        DescriptorLayoutBuilder builder {};
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        gpuSceneDataDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
 
     // Allocate a descriptor set for our draw image
     drawImageDescriptors = globalDescriptorAllocator.Allocate(device, drawImageDescriptorLayout);
-
-    VkDescriptorImageInfo imageInfo
     {
-        .imageView = drawImage.imageView,
-        .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
-    };
+        DescriptorWriter writer {};
+        writer.WriteImage(0, drawImage.imageView, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_GENERAL, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
 
-    VkWriteDescriptorSet drawImageWrite
-    {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = drawImageDescriptors,
-        .dstBinding = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-        .pImageInfo = &imageInfo,
-    };
-
-    vkUpdateDescriptorSets(device, 1, &drawImageWrite, 0, nullptr);
-
+        writer.UpdateSet(device, drawImageDescriptors);
+    }
+    
     // Make sure both the descriptor allocators and the new layout get cleaned up properly
     deletionQueue.Add([&]()
     {
         globalDescriptorAllocator.DestroyPool(device);
         vkDestroyDescriptorSetLayout(device, drawImageDescriptorLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, gpuSceneDataDescriptorLayout, nullptr);
     });
+
+    for (auto& frame : frames)
+    {
+        // Create a descriptor pool
+        std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> frameSizes
+        {
+            {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .ratio = 3},
+            {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .ratio = 3},
+            {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .ratio = 3},
+            {.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .ratio = 4},
+        };
+
+        frame.frameDescriptor = DescriptorAllocatorGrowable {};
+        frame.frameDescriptor.Init(device, 1000, frameSizes);
+
+        deletionQueue.Add([&]()
+        {
+            frame.frameDescriptor.DestroyPools(device);
+        });
+    }
 }
 
 void blackbox::VulkanRenderer::InitPipelines()

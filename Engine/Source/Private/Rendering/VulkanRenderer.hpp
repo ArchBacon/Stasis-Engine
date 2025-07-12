@@ -39,9 +39,12 @@ namespace blackbox
     {
         VkCommandPool commandPool {};
         VkCommandBuffer commandBuffer {};
+        
         VkSemaphore swapchainSemaphore {};
         VkFence renderFence {};
+        
         DeletionQueue deletionQueue {};
+        DescriptorAllocatorGrowable frameDescriptor {};
     };
 
     struct ComputePushConstants
@@ -58,6 +61,16 @@ namespace blackbox
         VkPipeline pipeline {};
         VkPipelineLayout layout {};
         ComputePushConstants data {};
+    };
+
+    struct GPUSceneData
+    {
+        mat4 view {1.0f};
+        mat4 proj {1.0f};
+        mat4 viewproj {1.0f};
+        float4 ambientColor {0.2f, 0.2f, 0.2f, 1.0f};
+        float4 sunlightDirection {0.0f, 0.0f, 1.0f, 1.0f}; // W for sun power
+        float4 sunlightColor {1.0f, 1.0f, 1.0f, 1.0f};
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
@@ -119,6 +132,9 @@ namespace blackbox
         VkPipeline meshPipeline {};
 
         std::vector<std::shared_ptr<MeshAsset>> testMeshes {};
+
+        GPUSceneData sceneData {};
+        VkDescriptorSetLayout gpuSceneDataDescriptorLayout {};
     
     public:
         VulkanRenderer();
