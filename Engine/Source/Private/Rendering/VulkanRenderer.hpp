@@ -67,6 +67,7 @@ namespace blackbox
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
         SDL_Window* window {nullptr};
+        bool resizeRequested {false};
 
         VkInstance instance {};
         VkDebugUtilsMessengerEXT debugMessenger {};
@@ -96,6 +97,7 @@ namespace blackbox
         AllocatedImage drawImage {};
         AllocatedImage depthImage {};
         VkExtent2D drawExtent {};
+        float renderScale = 1.0f;
 
         // Descriptors
         DescriptorAllocator globalDescriptorAllocator {};
@@ -150,6 +152,7 @@ namespace blackbox
 
         void CreateSwapchain(uint32_t width, uint32_t height);
         void DestroySwapchain();
+        void ResizeSwapchain();
 
         void DrawBackground(VkCommandBuffer commandBuffer);
         void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);

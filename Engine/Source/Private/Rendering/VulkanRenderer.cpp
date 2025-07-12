@@ -32,7 +32,7 @@ void blackbox::VulkanRenderer::Initialize()
 {
     SDL_Init(SDL_INIT_VIDEO);
 
-    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
+    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE;
     window = SDL_CreateWindow(
         "Blackbox",
         static_cast<int32_t>(windowExtent.width),
@@ -91,6 +91,11 @@ void blackbox::VulkanRenderer::Shutdown()
 
 void blackbox::VulkanRenderer::Draw()
 {
+    if (resizeRequested)
+    {
+        ResizeSwapchain();
+    }
+    
     // --------------- IMGUI START ---------------
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
@@ -98,6 +103,8 @@ void blackbox::VulkanRenderer::Draw()
 
     if (ImGui::Begin("Background"))
     {
+        ImGui::SliderFloat("Render scale", &renderScale, 0.3f, 1.0f);
+        
         ComputeEffect& selected = backgroundEffects[currentComputeEffectIndex];
 
         ImGui::Text("Selected effect: ", selected.name);
@@ -122,7 +129,12 @@ void blackbox::VulkanRenderer::Draw()
 
     // Request image from the swapchain
     uint32_t swapchainImageIndex {};
-    VK_CHECK(vkAcquireNextImageKHR(device, swapchain, singleSecond, GetCurrentFrame().swapchainSemaphore, nullptr, &swapchainImageIndex));
+    const VkResult error = vkAcquireNextImageKHR(device, swapchain, singleSecond, GetCurrentFrame().swapchainSemaphore, nullptr, &swapchainImageIndex);
+    if (error == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        resizeRequested = true;
+        return;
+    }
 
     // Reset and restart the command buffer
     const VkCommandBuffer commandBuffer = GetCurrentFrame().commandBuffer;
@@ -134,8 +146,8 @@ void blackbox::VulkanRenderer::Draw()
     // Begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that.
     const VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    drawExtent.width = drawImage.imageExtent.width;
-    drawExtent.height = drawImage.imageExtent.height;
+    drawExtent.width = std::min(swapchainExtent.width, drawImage.imageExtent.width) * renderScale;
+    drawExtent.height = std::min(swapchainExtent.height, drawImage.imageExtent.height) * renderScale;
 
     VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));	
 
@@ -194,7 +206,11 @@ void blackbox::VulkanRenderer::Draw()
         .pImageIndices = &swapchainImageIndex,
     };
 
-    VK_CHECK(vkQueuePresentKHR(graphicsQueue, &presentInfo));
+    VkResult presentResult = vkQueuePresentKHR(graphicsQueue, &presentInfo);
+    if (presentResult == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        resizeRequested = true;
+    }
 
     // Increase the number of frames drawn.
     frameNumber++;
@@ -766,6 +782,24 @@ void blackbox::VulkanRenderer::DestroySwapchain()
     {
         vkDestroyImageView(device, swapchainImageView, nullptr);
     } 
+}
+
+void blackbox::VulkanRenderer::ResizeSwapchain()
+{
+    vkDeviceWaitIdle(device);
+    DestroySwapchain();
+
+    VkExtent2D extentCache = windowExtent;
+
+    int width, height;
+    SDL_GetWindowSize(window, &width, &height);
+    windowExtent.width = width;
+    windowExtent.height = height;
+    
+    CreateSwapchain(windowExtent.width, windowExtent.height);
+    resizeRequested = false;
+
+    LogRenderer->Trace("Resized swapchain from {}x{} to {}x{}", extentCache.width, extentCache.height, windowExtent.width, windowExtent.height);
 }
 
 void blackbox::VulkanRenderer::ImmediateSubmit(
