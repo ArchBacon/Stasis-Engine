@@ -5,6 +5,7 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
+#include "vk_loader.h"
 #include "vk_pipelines.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl3.h"
@@ -16,17 +17,17 @@ constexpr bool USE_VALIDATION_LAYERS = false;
 constexpr bool USE_VALIDATION_LAYERS = true;
 #endif
 
-Blackbox::VulkanRenderer::VulkanRenderer()
+blackbox::VulkanRenderer::VulkanRenderer()
 {
     VulkanRenderer::Initialize();
 }
 
-Blackbox::VulkanRenderer::~VulkanRenderer()
+blackbox::VulkanRenderer::~VulkanRenderer()
 {
     VulkanRenderer::Shutdown();
 }
 
-void Blackbox::VulkanRenderer::Initialize()
+void blackbox::VulkanRenderer::Initialize()
 {
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -48,7 +49,7 @@ void Blackbox::VulkanRenderer::Initialize()
     InitDefaultData();
 }
 
-void Blackbox::VulkanRenderer::Shutdown()
+void blackbox::VulkanRenderer::Shutdown()
 {
     // Make sure the GPU has stopped doing its thing
     vkDeviceWaitIdle(device);
@@ -69,6 +70,12 @@ void Blackbox::VulkanRenderer::Shutdown()
         vkDestroySemaphore(device, renderSemaphore, nullptr);
     }
 
+    for (auto& mesh : testMeshes)
+    {
+        DestroyBuffer(mesh->meshBuffers.indexBuffer);
+        DestroyBuffer(mesh->meshBuffers.vertexBuffer);
+    } 
+
     deletionQueue.Flush();
     
     DestroySwapchain();
@@ -81,7 +88,7 @@ void Blackbox::VulkanRenderer::Shutdown()
     SDL_DestroyWindow(window);
 }
 
-void Blackbox::VulkanRenderer::Draw()
+void blackbox::VulkanRenderer::Draw()
 {
     // --------------- IMGUI START ---------------
     ImGui_ImplVulkan_NewFrame();
@@ -192,9 +199,9 @@ void Blackbox::VulkanRenderer::Draw()
     frameNumber++;
 }
 
-Blackbox::GPUMeshBuffers Blackbox::VulkanRenderer::UploadMesh(
-    std::span<uint32_t> indices,
-    std::span<Vertex> vertices
+blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
+    const std::span<uint32_t> indices,
+    const std::span<Vertex> vertices
 ) {
     const size_t vertexBufferSize = vertices.size() * sizeof(Vertex);
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
@@ -224,7 +231,7 @@ Blackbox::GPUMeshBuffers Blackbox::VulkanRenderer::UploadMesh(
     // Copy index buffer
     memcpy((char*)data + vertexBufferSize, indices.data(), indexBufferSize);
 
-    ImmediateSubmit([&](VkCommandBuffer commandBuffer)
+    ImmediateSubmit([&](const VkCommandBuffer commandBuffer)
     {
         const VkBufferCopy vertexCopy
         {
@@ -248,9 +255,9 @@ Blackbox::GPUMeshBuffers Blackbox::VulkanRenderer::UploadMesh(
     return newSurface;
 }
 
-void Blackbox::VulkanRenderer::DrawImGui(
-    VkCommandBuffer commandBuffer,
-    VkImageView targetImageView
+void blackbox::VulkanRenderer::DrawImGui(
+    const VkCommandBuffer commandBuffer,
+    const VkImageView targetImageView
 ) {
     VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(targetImageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     VkRenderingInfo renderInfo = vkinit::RenderingInfo(swapchainExtent, &colorAttachmentInfo, nullptr);
@@ -260,9 +267,10 @@ void Blackbox::VulkanRenderer::DrawImGui(
     vkCmdEndRendering(commandBuffer);
 }
 
-void Blackbox::VulkanRenderer::DrawGeometry(
-    VkCommandBuffer commandBuffer
-) {
+void blackbox::VulkanRenderer::DrawGeometry(
+    const VkCommandBuffer commandBuffer
+)
+{
     // Begin a render pass connected to our draw image
     VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -272,18 +280,22 @@ void Blackbox::VulkanRenderer::DrawGeometry(
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
 
     // Set dynamic viewport and scissor
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)drawExtent.width;
-    viewport.height = (float)drawExtent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    const VkViewport viewport
+    {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(drawExtent.width),
+        .height = static_cast<float>(drawExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor = {};
-    scissor.offset = {0, 0};
-    scissor.extent = drawExtent;
+    const VkRect2D scissor
+    {
+        .offset = {.x = 0, .y = 0},
+        .extent = drawExtent,
+    };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     // Launch a draw command to draw 3 vertices
@@ -291,22 +303,22 @@ void Blackbox::VulkanRenderer::DrawGeometry(
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
 
-    GPUDrawPushConstants pushConstants
+    const GPUDrawPushConstants pushConstants
     {
         .worldMatrix = mat4(1.f),
-        .vertexBuffer = rectangle.vertexBufferAddress,
+        .vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress,
     };
 
     vkCmdPushConstants(commandBuffer, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
-    vkCmdBindIndexBuffer(commandBuffer, rectangle.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdDrawIndexed(commandBuffer, 6, 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
     
     vkCmdEndRendering(commandBuffer);
 }
 
-void Blackbox::VulkanRenderer::DrawBackground(
-    VkCommandBuffer commandBuffer
+void blackbox::VulkanRenderer::DrawBackground(
+    const VkCommandBuffer commandBuffer
 ) {
     ComputeEffect& effect = backgroundEffects[currentComputeEffectIndex];
     
@@ -327,7 +339,7 @@ void Blackbox::VulkanRenderer::DrawBackground(
     vkCmdDispatch(commandBuffer, static_cast<uint32_t>(std::ceil(drawExtent.width / 16.0)), static_cast<uint32_t>(std::ceil(drawExtent.height / 16.0)), 1);
 }
 
-void Blackbox::VulkanRenderer::InitVulkan()
+void blackbox::VulkanRenderer::InitVulkan()
 {
     vkb::InstanceBuilder builder {};
 
@@ -398,7 +410,7 @@ void Blackbox::VulkanRenderer::InitVulkan()
     });
 }
 
-void Blackbox::VulkanRenderer::InitSwapchain()
+void blackbox::VulkanRenderer::InitSwapchain()
 {
     CreateSwapchain(windowExtent.width, windowExtent.height);
 
@@ -441,7 +453,7 @@ void Blackbox::VulkanRenderer::InitSwapchain()
     });
 }
 
-void Blackbox::VulkanRenderer::InitCommands()
+void blackbox::VulkanRenderer::InitCommands()
 {
     // Create a command pool for commands submitted to the graphics queue.
     // We also want the pool to allow for resetting of individual command buffers.
@@ -469,7 +481,7 @@ void Blackbox::VulkanRenderer::InitCommands()
     });
 }
 
-void Blackbox::VulkanRenderer::InitSyncStructures()
+void blackbox::VulkanRenderer::InitSyncStructures()
 {
     // Create sync structures
     // One fence to control when the GPU has finished rendering the frame,
@@ -498,7 +510,7 @@ void Blackbox::VulkanRenderer::InitSyncStructures()
     });
 }
 
-void Blackbox::VulkanRenderer::InitDescriptors()
+void blackbox::VulkanRenderer::InitDescriptors()
 {
     // Create a descriptor pool that will hold 10 sets with 1 image each
     std::vector<DescriptorAllocator::PoolSizeRatio> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1}};
@@ -540,7 +552,7 @@ void Blackbox::VulkanRenderer::InitDescriptors()
     });
 }
 
-void Blackbox::VulkanRenderer::InitPipelines()
+void blackbox::VulkanRenderer::InitPipelines()
 {
     // Compute pipelines
     InitBackgroundPipelines();
@@ -550,7 +562,7 @@ void Blackbox::VulkanRenderer::InitPipelines()
     InitMeshPipeline();
 }
 
-void Blackbox::VulkanRenderer::InitBackgroundPipelines()
+void blackbox::VulkanRenderer::InitBackgroundPipelines()
 {
     constexpr VkPushConstantRange pushConstants
     {
@@ -641,21 +653,21 @@ void Blackbox::VulkanRenderer::InitBackgroundPipelines()
     });
 }
 
-void Blackbox::VulkanRenderer::InitTrianglePipeline()
+void blackbox::VulkanRenderer::InitTrianglePipeline()
 {
     VkShaderModule triangleFragShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
     {
         LogRenderer->Error("Error when building the triangle fragment shader.");
     }
-    LogRenderer->Info("Triangle fragment shader successfully loaded.");
+    LogRenderer->Trace("Triangle fragment shader successfully loaded.");
 
     VkShaderModule triangleVertShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle.vert", device, &triangleVertShader))
     {
         LogRenderer->Error("Error when building the triangle vertex shader.");
     }
-    LogRenderer->Info("Triangle vertex shader successfully loaded.");
+    LogRenderer->Trace("Triangle vertex shader successfully loaded.");
 
     // Build the pipeline layout that controls the inputs/outputs of the shader
     // We are not using descriptor sets or other systems yet, so no need to use anything other than empty default
@@ -689,21 +701,21 @@ void Blackbox::VulkanRenderer::InitTrianglePipeline()
     });
 }
 
-void Blackbox::VulkanRenderer::InitMeshPipeline()
+void blackbox::VulkanRenderer::InitMeshPipeline()
 {
     VkShaderModule triangleFragShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
     {
         LogRenderer->Error("Error when building the mesh fragment shader.");
     }
-    LogRenderer->Info("Triangle fragment shader successfully loaded.");
+    LogRenderer->Trace("Triangle fragment shader successfully loaded.");
 
     VkShaderModule triangleVertShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle_mesh.vert", device, &triangleVertShader))
     {
         LogRenderer->Error("Error when building the mesh vertex shader.");
     }
-    LogRenderer->Info("Triangle vertex shader successfully loaded.");
+    LogRenderer->Trace("Triangle vertex shader successfully loaded.");
 
     VkPushConstantRange pushConstants
     {
@@ -745,7 +757,7 @@ void Blackbox::VulkanRenderer::InitMeshPipeline()
     });
 }
 
-void Blackbox::VulkanRenderer::InitDefaultData()
+void blackbox::VulkanRenderer::InitDefaultData()
 {
     std::array<Vertex, 4> rectVertices {};
 
@@ -777,9 +789,11 @@ void Blackbox::VulkanRenderer::InitDefaultData()
         DestroyBuffer(rectangle.indexBuffer);
         DestroyBuffer(rectangle.vertexBuffer);
     });
+
+    testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
 }
 
-void Blackbox::VulkanRenderer::CreateSwapchain(
+void blackbox::VulkanRenderer::CreateSwapchain(
     const uint32_t width,
     const uint32_t height
 ) {
@@ -800,7 +814,7 @@ void Blackbox::VulkanRenderer::CreateSwapchain(
     swapchainImageViews = vkbSwapchain.get_image_views().value();
 }
 
-void Blackbox::VulkanRenderer::DestroySwapchain()
+void blackbox::VulkanRenderer::DestroySwapchain()
 {
     vkDestroySwapchainKHR(device, swapchain, nullptr);
 
@@ -811,7 +825,7 @@ void Blackbox::VulkanRenderer::DestroySwapchain()
     } 
 }
 
-void Blackbox::VulkanRenderer::ImmediateSubmit(
+void blackbox::VulkanRenderer::ImmediateSubmit(
     std::function<void(VkCommandBuffer)>&& callback
 ) {
     VK_CHECK(vkResetFences(device, 1, &immediateFence));
@@ -834,7 +848,7 @@ void Blackbox::VulkanRenderer::ImmediateSubmit(
     VK_CHECK(vkWaitForFences(device, 1, &immediateFence, VK_TRUE, UINT64_MAX));
 }
 
-void Blackbox::VulkanRenderer::InitImGui()
+void blackbox::VulkanRenderer::InitImGui()
 {
     // 1: Create descriptor pool for ImGui
     // The size of the pool is very oversized, but it's copied from the ImGui demo itself
@@ -900,10 +914,10 @@ void Blackbox::VulkanRenderer::InitImGui()
     });
 }
 
-Blackbox::AllocatedBuffer Blackbox::VulkanRenderer::CreateBuffer(
-    size_t allocSize,
-    VkBufferUsageFlags usage,
-    VmaMemoryUsage memoryUsage
+blackbox::AllocatedBuffer blackbox::VulkanRenderer::CreateBuffer(
+    const size_t allocSize,
+    const VkBufferUsageFlags usage,
+    const VmaMemoryUsage memoryUsage
 ) {
     // Allocate buffer
     VkBufferCreateInfo bufferInfo
@@ -927,7 +941,7 @@ Blackbox::AllocatedBuffer Blackbox::VulkanRenderer::CreateBuffer(
     return newBuffer;
 }
 
-void Blackbox::VulkanRenderer::DestroyBuffer(
+void blackbox::VulkanRenderer::DestroyBuffer(
     const AllocatedBuffer& buffer
 ) {
     vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation);

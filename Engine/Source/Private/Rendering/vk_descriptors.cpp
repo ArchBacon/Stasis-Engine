@@ -1,6 +1,6 @@
 ﻿#include "vk_descriptors.h"
 
-void Blackbox::DescriptorLayoutBuilder::AddBinding(
+void blackbox::DescriptorLayoutBuilder::AddBinding(
     const uint32_t binding,
     const VkDescriptorType type
 ) {
@@ -14,12 +14,12 @@ void Blackbox::DescriptorLayoutBuilder::AddBinding(
     bindings.push_back(newBinding);   
 }
 
-void Blackbox::DescriptorLayoutBuilder::Clear()
+void blackbox::DescriptorLayoutBuilder::Clear()
 {
     bindings.clear();
 }
 
-VkDescriptorSetLayout Blackbox::DescriptorLayoutBuilder::Build(
+VkDescriptorSetLayout blackbox::DescriptorLayoutBuilder::Build(
     const VkDevice device,
     const VkShaderStageFlags shaderStages,
     const void* pNext,
@@ -45,7 +45,7 @@ VkDescriptorSetLayout Blackbox::DescriptorLayoutBuilder::Build(
     return set;
 }
 
-void Blackbox::DescriptorAllocator::InitPool(
+void blackbox::DescriptorAllocator::InitPool(
     const VkDevice device,
     const uint32_t maxSets,
     const std::span<PoolSizeRatio> poolRatios
@@ -71,19 +71,19 @@ void Blackbox::DescriptorAllocator::InitPool(
     vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool);
 }
 
-void Blackbox::DescriptorAllocator::ClearDescriptors(
+void blackbox::DescriptorAllocator::ClearDescriptors(
     const VkDevice device
 ) {
     vkResetDescriptorPool(device, pool, 0);
 }
 
-void Blackbox::DescriptorAllocator::DestroyPool(
+void blackbox::DescriptorAllocator::DestroyPool(
     const VkDevice device
 ) {
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
-VkDescriptorSet Blackbox::DescriptorAllocator::Allocate(
+VkDescriptorSet blackbox::DescriptorAllocator::Allocate(
     const VkDevice device,
     const VkDescriptorSetLayout layout
 ) {

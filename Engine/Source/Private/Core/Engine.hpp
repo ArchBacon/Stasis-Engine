@@ -4,7 +4,7 @@
 
 struct SDL_Window;
 
-namespace Blackbox
+namespace blackbox
 {
     class VulkanRenderer;
     
@@ -24,4 +24,4 @@ namespace Blackbox
     };
 }
 
-extern Blackbox::Engine gEngine;
+extern blackbox::Engine gEngine;

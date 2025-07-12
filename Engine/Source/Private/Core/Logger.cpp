@@ -1,7 +1,7 @@
 ﻿#include "Core/Logger.hpp"
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-Blackbox::Logger::Logger(
+blackbox::Logger::Logger(
     const std::string& name
 ) {
     spdlog::set_pattern("%^ %n [%T] %v%$");

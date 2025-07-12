@@ -1,7 +1,7 @@
 #include "vk_images.h"
 #include "vk_initializers.h"
 
-void Blackbox::vkutil::TransitionImage(
+void blackbox::vkutil::TransitionImage(
     const VkCommandBuffer command,
     const VkImage image,
     const VkImageLayout currentLayout,
@@ -28,7 +28,7 @@ void Blackbox::vkutil::TransitionImage(
     vkCmdPipelineBarrier2(command, &dependencyInfo);
 }
 
-void Blackbox::vkutil::CopyImageToImage(
+void blackbox::vkutil::CopyImageToImage(
     const VkCommandBuffer command,
     const VkImage source,
     const VkImage destination,

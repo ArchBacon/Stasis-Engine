@@ -19,7 +19,7 @@
 #include "Blackbox.hpp"
 #include "Core/Types.hpp"
 
-namespace Blackbox
+namespace blackbox
 {
     #define VK_CHECK(x)                                                             \
     do {                                                                            \

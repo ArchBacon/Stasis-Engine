@@ -11,8 +11,10 @@
 
 #include "Core/Types.hpp"
 
-namespace Blackbox
+namespace blackbox
 {
+    struct MeshAsset;
+
     struct DeletionQueue
     {
         std::deque<std::function<void()>> queue {};
@@ -117,6 +119,8 @@ namespace Blackbox
         VkPipeline meshPipeline {};
 
         GPUMeshBuffers rectangle {};
+
+        std::vector<std::shared_ptr<MeshAsset>> testMeshes {};
     
     public:
         VulkanRenderer();

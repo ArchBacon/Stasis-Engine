@@ -1,6 +1,6 @@
 ﻿#include "vk_initializers.h"
 
-VkCommandPoolCreateInfo Blackbox::vkinit::CommandPoolCreateInfo(
+VkCommandPoolCreateInfo blackbox::vkinit::CommandPoolCreateInfo(
     const uint32_t queueFamilyIndex,
     const VkCommandPoolCreateFlags flags
 ) {
@@ -12,7 +12,7 @@ VkCommandPoolCreateInfo Blackbox::vkinit::CommandPoolCreateInfo(
     };
 }
 
-VkCommandBufferAllocateInfo Blackbox::vkinit::CommandBufferAllocateInfo(
+VkCommandBufferAllocateInfo blackbox::vkinit::CommandBufferAllocateInfo(
     const VkCommandPool pool,
     const uint32_t count
 ) {
@@ -25,7 +25,7 @@ VkCommandBufferAllocateInfo Blackbox::vkinit::CommandBufferAllocateInfo(
     };
 }
 
-VkCommandBufferBeginInfo Blackbox::vkinit::CommandBufferBeginInfo(
+VkCommandBufferBeginInfo blackbox::vkinit::CommandBufferBeginInfo(
     const VkCommandBufferUsageFlags flags
 ) {
     return VkCommandBufferBeginInfo
@@ -35,7 +35,7 @@ VkCommandBufferBeginInfo Blackbox::vkinit::CommandBufferBeginInfo(
     };
 }
 
-VkFenceCreateInfo Blackbox::vkinit::FenceCreateInfo(
+VkFenceCreateInfo blackbox::vkinit::FenceCreateInfo(
     const VkFenceCreateFlags flags
 ) {
     return VkFenceCreateInfo
@@ -45,7 +45,7 @@ VkFenceCreateInfo Blackbox::vkinit::FenceCreateInfo(
     };
 }
 
-VkSemaphoreCreateInfo Blackbox::vkinit::SemaphoreCreateInfo(
+VkSemaphoreCreateInfo blackbox::vkinit::SemaphoreCreateInfo(
     const VkSemaphoreCreateFlags flags
 ) {
     return VkSemaphoreCreateInfo
@@ -55,7 +55,7 @@ VkSemaphoreCreateInfo Blackbox::vkinit::SemaphoreCreateInfo(
     };
 }
 
-VkSemaphoreSubmitInfo Blackbox::vkinit::SemaphoreSubmitInfo(
+VkSemaphoreSubmitInfo blackbox::vkinit::SemaphoreSubmitInfo(
     const VkPipelineStageFlags2 stageMask,
     const VkSemaphore semaphore
 ) {
@@ -69,7 +69,7 @@ VkSemaphoreSubmitInfo Blackbox::vkinit::SemaphoreSubmitInfo(
     };
 }
 
-VkCommandBufferSubmitInfo Blackbox::vkinit::CommandBufferSubmitInfo(
+VkCommandBufferSubmitInfo blackbox::vkinit::CommandBufferSubmitInfo(
     const VkCommandBuffer commandBuffer
 ) {
 	return VkCommandBufferSubmitInfo
@@ -80,7 +80,7 @@ VkCommandBufferSubmitInfo Blackbox::vkinit::CommandBufferSubmitInfo(
     };
 }
 
-VkSubmitInfo2 Blackbox::vkinit::SubmitInfo(
+VkSubmitInfo2 blackbox::vkinit::SubmitInfo(
     const VkCommandBufferSubmitInfo* commandBuffer,
     const VkSemaphoreSubmitInfo* signalSemaphoreInfo,
     const VkSemaphoreSubmitInfo* waitSemaphoreInfo
@@ -97,7 +97,7 @@ VkSubmitInfo2 Blackbox::vkinit::SubmitInfo(
     };
 }
 
-VkPresentInfoKHR Blackbox::vkinit::PresentInfo()
+VkPresentInfoKHR blackbox::vkinit::PresentInfo()
 {
     return VkPresentInfoKHR
     {
@@ -107,7 +107,7 @@ VkPresentInfoKHR Blackbox::vkinit::PresentInfo()
     };
 }
 
-VkRenderingAttachmentInfo Blackbox::vkinit::AttachmentInfo(
+VkRenderingAttachmentInfo blackbox::vkinit::AttachmentInfo(
     const VkImageView view,
     const VkClearValue* clear,
     const VkImageLayout layout
@@ -123,7 +123,7 @@ VkRenderingAttachmentInfo Blackbox::vkinit::AttachmentInfo(
     };
 }
 
-VkRenderingAttachmentInfo Blackbox::vkinit::DepthAttachmentInfo(
+VkRenderingAttachmentInfo blackbox::vkinit::DepthAttachmentInfo(
     const VkImageView view,
     const VkImageLayout layout
 ) {
@@ -138,7 +138,7 @@ VkRenderingAttachmentInfo Blackbox::vkinit::DepthAttachmentInfo(
     };
 }
 
-VkRenderingInfo Blackbox::vkinit::RenderingInfo(
+VkRenderingInfo blackbox::vkinit::RenderingInfo(
     const VkExtent2D renderExtent,
     const VkRenderingAttachmentInfo* colorAttachment,
     const VkRenderingAttachmentInfo* depthAttachment
@@ -154,7 +154,7 @@ VkRenderingInfo Blackbox::vkinit::RenderingInfo(
     };
 }
 
-VkImageSubresourceRange Blackbox::vkinit::ImageSubresourceRange(
+VkImageSubresourceRange blackbox::vkinit::ImageSubresourceRange(
     const VkImageAspectFlags aspectMask
 ) {
     return VkImageSubresourceRange
@@ -167,7 +167,7 @@ VkImageSubresourceRange Blackbox::vkinit::ImageSubresourceRange(
     };
 }
 
-VkDescriptorSetLayoutBinding Blackbox::vkinit::DescriptorsetLayoutBinding(
+VkDescriptorSetLayoutBinding blackbox::vkinit::DescriptorsetLayoutBinding(
     const VkDescriptorType type,
     const VkShaderStageFlags stageFlags,
     const uint32_t binding
@@ -181,7 +181,7 @@ VkDescriptorSetLayoutBinding Blackbox::vkinit::DescriptorsetLayoutBinding(
     };
 }
 
-VkDescriptorSetLayoutCreateInfo Blackbox::vkinit::DescriptorsetLayoutCreateInfo(
+VkDescriptorSetLayoutCreateInfo blackbox::vkinit::DescriptorsetLayoutCreateInfo(
     const VkDescriptorSetLayoutBinding* bindings,
     const uint32_t bindingCount
 ) {
@@ -194,7 +194,7 @@ VkDescriptorSetLayoutCreateInfo Blackbox::vkinit::DescriptorsetLayoutCreateInfo(
     };
 }
 
-VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorImage(
+VkWriteDescriptorSet blackbox::vkinit::WriteDescriptorImage(
     const VkDescriptorType type,
     const VkDescriptorSet dstSet,
     const VkDescriptorImageInfo* imageInfo,
@@ -211,7 +211,7 @@ VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorImage(
     };
 }
 
-VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorBuffer(
+VkWriteDescriptorSet blackbox::vkinit::WriteDescriptorBuffer(
     const VkDescriptorType type,
     const VkDescriptorSet dstSet,
     const VkDescriptorBufferInfo* bufferInfo,
@@ -228,7 +228,7 @@ VkWriteDescriptorSet Blackbox::vkinit::WriteDescriptorBuffer(
     };
 }
 
-VkDescriptorBufferInfo Blackbox::vkinit::BufferInfo(
+VkDescriptorBufferInfo blackbox::vkinit::BufferInfo(
     const VkBuffer buffer,
     const VkDeviceSize offset,
     const VkDeviceSize range
@@ -241,7 +241,7 @@ VkDescriptorBufferInfo Blackbox::vkinit::BufferInfo(
     };
 }
 
-VkImageCreateInfo Blackbox::vkinit::ImageCreateInfo(
+VkImageCreateInfo blackbox::vkinit::ImageCreateInfo(
     const VkFormat format,
     const VkImageUsageFlags usageFlags,
     const VkExtent3D extent
@@ -260,7 +260,7 @@ VkImageCreateInfo Blackbox::vkinit::ImageCreateInfo(
     };
 }
 
-VkImageViewCreateInfo Blackbox::vkinit::ImageviewCreateInfo(
+VkImageViewCreateInfo blackbox::vkinit::ImageviewCreateInfo(
     const VkFormat format,
     const VkImage image,
     const VkImageAspectFlags aspectFlags
@@ -282,7 +282,7 @@ VkImageViewCreateInfo Blackbox::vkinit::ImageviewCreateInfo(
     };
 }
 
-VkPipelineLayoutCreateInfo Blackbox::vkinit::PipelineLayoutCreateInfo()
+VkPipelineLayoutCreateInfo blackbox::vkinit::PipelineLayoutCreateInfo()
 {
     return VkPipelineLayoutCreateInfo
     {
@@ -293,7 +293,7 @@ VkPipelineLayoutCreateInfo Blackbox::vkinit::PipelineLayoutCreateInfo()
     };
 }
 
-VkPipelineShaderStageCreateInfo Blackbox::vkinit::PipelineShaderStageCreateInfo(
+VkPipelineShaderStageCreateInfo blackbox::vkinit::PipelineShaderStageCreateInfo(
     const VkShaderStageFlagBits stage,
     const VkShaderModule shaderModule,
     const char* entry

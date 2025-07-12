@@ -7,16 +7,16 @@
 #include "imgui/imgui_impl_vulkan.h"
 #include "Rendering/VulkanRenderer.hpp"
 
-Blackbox::Engine gEngine;
+blackbox::Engine gEngine;
 
-void Blackbox::Engine::Initialize()
+void blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
     renderer = std::make_unique<VulkanRenderer>();
 }
 
-void Blackbox::Engine::Run()
+void blackbox::Engine::Run()
 {
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
@@ -65,7 +65,7 @@ void Blackbox::Engine::Run()
     }
 }
 
-void Blackbox::Engine::Shutdown()
+void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
 }
