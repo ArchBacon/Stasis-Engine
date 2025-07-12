@@ -2,7 +2,7 @@
 
 #include "vk_types.h"
 
-namespace Blackbox::vkinit
+namespace blackbox::vkinit
 {
     VkCommandPoolCreateInfo CommandPoolCreateInfo(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
     VkCommandBufferAllocateInfo CommandBufferAllocateInfo(VkCommandPool pool, uint32_t count = 1);

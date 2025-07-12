@@ -4,7 +4,7 @@
 #include <fstream>
 #include "vk_initializers.h"
 
-bool Blackbox::vkutil::LoadShaderModule(
+bool blackbox::vkutil::LoadShaderModule(
     const char* filePath,
     const VkDevice device,
     VkShaderModule* outShaderModule
@@ -55,7 +55,7 @@ bool Blackbox::vkutil::LoadShaderModule(
     return true;
 }
 
-void Blackbox::PipelineBuilder::Clear()
+void blackbox::PipelineBuilder::Clear()
 {
     inputAssembly = {.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     rasterizer = {.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
@@ -67,7 +67,7 @@ void Blackbox::PipelineBuilder::Clear()
     shaderStages.clear();
 }
 
-VkPipeline Blackbox::PipelineBuilder::Build(
+VkPipeline blackbox::PipelineBuilder::Build(
     VkDevice device
 ) {
     // MAke the viewport state from our stored viewport and scissor.
@@ -139,7 +139,7 @@ VkPipeline Blackbox::PipelineBuilder::Build(
     return pipeline;
 }
 
-void Blackbox::PipelineBuilder::SetShaders(
+void blackbox::PipelineBuilder::SetShaders(
     VkShaderModule vertexShader,
     VkShaderModule fragmentShader
 ) {
@@ -148,21 +148,21 @@ void Blackbox::PipelineBuilder::SetShaders(
     shaderStages.push_back(vkinit::PipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader));
 }
 
-void Blackbox::PipelineBuilder::SetInputTopology(
+void blackbox::PipelineBuilder::SetInputTopology(
     VkPrimitiveTopology topology
 ) {
     inputAssembly.topology = topology;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 }
 
-void Blackbox::PipelineBuilder::SetPolygonMode(
+void blackbox::PipelineBuilder::SetPolygonMode(
     VkPolygonMode mode
 ) {
     rasterizer.polygonMode = mode;
     rasterizer.lineWidth = 1.0f;
 }
 
-void Blackbox::PipelineBuilder::SetCullMode(
+void blackbox::PipelineBuilder::SetCullMode(
     VkCullModeFlags mode,
     VkFrontFace frontFace
 ) {
@@ -170,7 +170,7 @@ void Blackbox::PipelineBuilder::SetCullMode(
     rasterizer.frontFace = frontFace;
 }
 
-void Blackbox::PipelineBuilder::SetMultisamplingNone()
+void blackbox::PipelineBuilder::SetMultisamplingNone()
 {
     multisampling.sampleShadingEnable = VK_FALSE;
     // Multisampling defaulted to no multisampling (1 sample per pixel)
@@ -182,7 +182,7 @@ void Blackbox::PipelineBuilder::SetMultisamplingNone()
     multisampling.alphaToOneEnable = VK_FALSE;
 }
 
-void Blackbox::PipelineBuilder::DisableBlending()
+void blackbox::PipelineBuilder::DisableBlending()
 {
     // Default write mask
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -190,7 +190,7 @@ void Blackbox::PipelineBuilder::DisableBlending()
     colorBlendAttachment.blendEnable = VK_FALSE;
 }
 
-void Blackbox::PipelineBuilder::SetColorAttachmentFormat(
+void blackbox::PipelineBuilder::SetColorAttachmentFormat(
     VkFormat format
 ) {
     colorAttachmentFormat = format;
@@ -198,13 +198,13 @@ void Blackbox::PipelineBuilder::SetColorAttachmentFormat(
     renderInfo.pColorAttachmentFormats = &colorAttachmentFormat;
 }
 
-void Blackbox::PipelineBuilder::SetDepthFormat(
+void blackbox::PipelineBuilder::SetDepthFormat(
     VkFormat format
 ) {
     renderInfo.depthAttachmentFormat = format;
 }
 
-void Blackbox::PipelineBuilder::DisableDepthTest()
+void blackbox::PipelineBuilder::DisableDepthTest()
 {
     depthStencil.depthTestEnable = VK_FALSE;
     depthStencil.depthWriteEnable = VK_FALSE;
@@ -215,4 +215,43 @@ void Blackbox::PipelineBuilder::DisableDepthTest()
     depthStencil.back = {};
     depthStencil.minDepthBounds = 0.0f;
     depthStencil.maxDepthBounds = 1.0f;
+}
+
+void blackbox::PipelineBuilder::EnableDepthTest(
+    const bool depthWriteEnable,
+    const VkCompareOp op
+) {
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = depthWriteEnable;
+    depthStencil.depthCompareOp = op;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.front = {};
+    depthStencil.back = {};
+    depthStencil.minDepthBounds = 0.f;
+    depthStencil.maxDepthBounds = 1.f;
+}
+
+void blackbox::PipelineBuilder::EnableBlendingAdditive()
+{
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+}
+
+void blackbox::PipelineBuilder::EnableBlendingAlphablend()
+{
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_TRUE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }

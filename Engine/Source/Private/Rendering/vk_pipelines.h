@@ -2,12 +2,12 @@
 
 #include "vk_types.h"
 
-namespace Blackbox::vkutil
+namespace blackbox::vkutil
 {
     bool LoadShaderModule(const char* filePath, VkDevice device, VkShaderModule* outShaderModule);
 }
 
-namespace Blackbox
+namespace blackbox
 {
     class PipelineBuilder
     {
@@ -36,5 +36,8 @@ namespace Blackbox
         void SetColorAttachmentFormat(VkFormat format);
         void SetDepthFormat(VkFormat format);
         void DisableDepthTest();
+        void EnableDepthTest(bool depthWriteEnable, VkCompareOp op);
+        void EnableBlendingAdditive();
+        void EnableBlendingAlphablend();
     };
 }

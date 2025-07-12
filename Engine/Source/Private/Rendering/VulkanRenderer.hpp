@@ -11,8 +11,10 @@
 
 #include "Core/Types.hpp"
 
-namespace Blackbox
+namespace blackbox
 {
+    struct MeshAsset;
+
     struct DeletionQueue
     {
         std::deque<std::function<void()>> queue {};
@@ -65,6 +67,7 @@ namespace Blackbox
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
         SDL_Window* window {nullptr};
+        bool resizeRequested {false};
 
         VkInstance instance {};
         VkDebugUtilsMessengerEXT debugMessenger {};
@@ -92,7 +95,9 @@ namespace Blackbox
 
         // Draw resources
         AllocatedImage drawImage {};
+        AllocatedImage depthImage {};
         VkExtent2D drawExtent {};
+        float renderScale = 1.0f;
 
         // Descriptors
         DescriptorAllocator globalDescriptorAllocator {};
@@ -110,8 +115,10 @@ namespace Blackbox
         std::vector<ComputeEffect> backgroundEffects {};
         int currentComputeEffectIndex {0};
 
-        VkPipelineLayout trianglePipelineLayout {};
-        VkPipeline trianglePipeline {};
+        VkPipelineLayout meshPipelineLayout {};
+        VkPipeline meshPipeline {};
+
+        std::vector<std::shared_ptr<MeshAsset>> testMeshes {};
     
     public:
         VulkanRenderer();
@@ -128,6 +135,8 @@ namespace Blackbox
 
     public:
         void Draw();
+
+        GPUMeshBuffers UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
         
     private:
         void InitVulkan();
@@ -137,10 +146,13 @@ namespace Blackbox
         void InitDescriptors();
         void InitPipelines();
         void InitBackgroundPipelines();
-        void InitTrianglePipeline();
+        void InitMeshPipeline();
+        
+        void InitDefaultData();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
         void DestroySwapchain();
+        void ResizeSwapchain();
 
         void DrawBackground(VkCommandBuffer commandBuffer);
         void DrawImGui(VkCommandBuffer commandBuffer, VkImageView targetImageView);
@@ -148,5 +160,8 @@ namespace Blackbox
         
         void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
         void InitImGui();
+
+        AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+        void DestroyBuffer(const AllocatedBuffer& buffer);
     };
 }
