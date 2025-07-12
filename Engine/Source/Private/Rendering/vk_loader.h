@@ -23,5 +23,5 @@ namespace blackbox
         GPUMeshBuffers meshBuffers {};
     };
 
-    std::optional<std::vector<std::shared_ptr<MeshAsset>>> LoadGltfMesh(VulkanRenderer* renderer, std::filesystem::path filePath);
+    std::optional<std::vector<std::shared_ptr<MeshAsset>>> LoadGltfMesh(VulkanRenderer* renderer, const std::filesystem::path& filePath);
 }
