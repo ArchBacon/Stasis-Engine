@@ -272,9 +272,10 @@ void blackbox::VulkanRenderer::DrawGeometry(
     const VkCommandBuffer commandBuffer
 ) {
     // Begin a render pass connected to our draw image
-    VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingAttachmentInfo colorAttachmentInfo = vkinit::AttachmentInfo(drawImage.imageView, nullptr, VK_IMAGE_LAYOUT_GENERAL);
+    VkRenderingAttachmentInfo depthAttachment = vkinit::DepthAttachmentInfo(depthImage.imageView, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
 
-    VkRenderingInfo renderInfo = vkinit::RenderingInfo(drawExtent, &colorAttachmentInfo, nullptr);
+    VkRenderingInfo renderInfo = vkinit::RenderingInfo(drawExtent, &colorAttachmentInfo, &depthAttachment);
     vkCmdBeginRendering(commandBuffer, &renderInfo);
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, trianglePipeline);
@@ -422,18 +423,18 @@ void blackbox::VulkanRenderer::InitSwapchain()
 {
     CreateSwapchain(windowExtent.width, windowExtent.height);
 
-    //draw image size will match the window
-    VkExtent3D drawImageExtent = {
+    // Draw image size will match the window
+    const VkExtent3D drawImageExtent = {
         windowExtent.width,
         windowExtent.height,
         1
     };
 
-    //hardcoding the draw format to 32-bit float
+    // Hardcoding the draw format to 32-bit float
     drawImage.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
     drawImage.imageExtent = drawImageExtent;
 
-    VkImageUsageFlags drawImageUsages{};
+    VkImageUsageFlags drawImageUsages {};
     drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     drawImageUsages |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     drawImageUsages |= VK_IMAGE_USAGE_STORAGE_BIT;
@@ -441,23 +442,42 @@ void blackbox::VulkanRenderer::InitSwapchain()
 
     VkImageCreateInfo drawImageInfo = vkinit::ImageCreateInfo(drawImage.imageFormat, drawImageUsages, drawImageExtent);
 
-    //for the draw image, we want to allocate it from gpu local memory
-    VmaAllocationCreateInfo drawImageAllocInfo = {};
+    // For the draw image, we want to allocate it from gpu local memory
+    VmaAllocationCreateInfo drawImageAllocInfo {};
     drawImageAllocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     drawImageAllocInfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    //allocate and create the image
+    // Allocate and create the image
     vmaCreateImage(allocator, &drawImageInfo, &drawImageAllocInfo, &drawImage.image, &drawImage.allocation, nullptr);
 
-    //build a image-view for the draw image to use for rendering
+    // Build an image-view for the draw image to use for rendering
     VkImageViewCreateInfo drawViewInfo = vkinit::ImageviewCreateInfo(drawImage.imageFormat, drawImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
 
     VK_CHECK(vkCreateImageView(device, &drawViewInfo, nullptr, &drawImage.imageView));
 
-    //add to deletion queues
+    depthImage.imageFormat = VK_FORMAT_D32_SFLOAT;
+    depthImage.imageExtent = drawImageExtent;
+
+    VkImageUsageFlags depthImageUsages {};
+    depthImageUsages |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+    VkImageCreateInfo depthImageInfo = vkinit::ImageCreateInfo(depthImage.imageFormat, depthImageUsages, drawImageExtent);
+
+    // Allocate and create the image
+    vmaCreateImage(allocator, &depthImageInfo, &drawImageAllocInfo, &depthImage.image, &depthImage.allocation, nullptr);
+
+    // Build an image-view for the draw image to use for rendering
+    VkImageViewCreateInfo depthViewInfo = vkinit::ImageviewCreateInfo(depthImage.imageFormat, depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    VK_CHECK(vkCreateImageView(device, &depthViewInfo, nullptr, &depthImage.imageView));
+    
+    // Add to deletion queues
     deletionQueue.Add([=]() {
         vkDestroyImageView(device, drawImage.imageView, nullptr);
         vmaDestroyImage(allocator, drawImage.image, drawImage.allocation);
+
+        vkDestroyImageView(device, depthImage.imageView, nullptr);
+        vmaDestroyImage(allocator, depthImage.image, depthImage.allocation);
     });
 }
 
@@ -694,7 +714,7 @@ void blackbox::VulkanRenderer::InitTrianglePipeline()
 
     // Connect the image format we will draw into, from draw image
     pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);
-    pipelineBuilder.SetDepthFormat(VK_FORMAT_UNDEFINED);
+    pipelineBuilder.SetDepthFormat(depthImage.imageFormat);
 
     // Finally, build the pipeline
     trianglePipeline = pipelineBuilder.Build(device);
@@ -746,11 +766,11 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.SetMultisamplingNone();
     pipelineBuilder.DisableBlending();
-    pipelineBuilder.DisableDepthTest();
+    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
     // Connect the image format we will draw into, from draw image
     pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);
-    pipelineBuilder.SetDepthFormat(VK_FORMAT_UNDEFINED);
+    pipelineBuilder.SetDepthFormat(depthImage.imageFormat);
 
     // Finally, build the pipeline
     meshPipeline = pipelineBuilder.Build(device);

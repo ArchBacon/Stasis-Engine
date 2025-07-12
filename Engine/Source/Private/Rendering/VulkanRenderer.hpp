@@ -94,6 +94,7 @@ namespace blackbox
 
         // Draw resources
         AllocatedImage drawImage {};
+        AllocatedImage depthImage {};
         VkExtent2D drawExtent {};
 
         // Descriptors
