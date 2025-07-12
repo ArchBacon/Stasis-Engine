@@ -711,7 +711,7 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
     pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.SetMultisamplingNone();
-    pipelineBuilder.DisableBlending();
+    pipelineBuilder.EnableBlendingAdditive();
     pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
     // Connect the image format we will draw into, from draw image

@@ -37,5 +37,7 @@ namespace blackbox
         void SetDepthFormat(VkFormat format);
         void DisableDepthTest();
         void EnableDepthTest(bool depthWriteEnable, VkCompareOp op);
+        void EnableBlendingAdditive();
+        void EnableBlendingAlphablend();
     };
 }
