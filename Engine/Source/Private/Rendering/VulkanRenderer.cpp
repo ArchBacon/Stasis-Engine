@@ -24,14 +24,16 @@ void blackbox::GLTFMetallicRoughness::BuildPipelines(
     VkShaderModule meshFragShader {};
     if (!vkutil::LoadShaderModule("Shaders/mesh.frag", renderer->device, &meshFragShader))
     {
-        LogRenderer->Error("Error when building the mesh fragment shader module.");
+        LogRenderer->Error("Shader \"{}\" failed to load.", "mesh.frag");
     }
+    LogRenderer->Trace("Shader \"{}\" loaded.", "mesh.frag");
     
     VkShaderModule meshVertexShader {};
     if (!vkutil::LoadShaderModule("Shaders/mesh.vert", renderer->device, &meshVertexShader))
     {
-        LogRenderer->Error("Error when building the mesh vertex shader module.");
+        LogRenderer->Error("Shader \"{}\" failed to load.", "mesh.vert");
     }
+    LogRenderer->Trace("Shader \"{}\" loaded.", "mesh.vert");
 
     VkPushConstantRange matrixRange
     {
@@ -860,16 +862,16 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     VkShaderModule triangleFragShader {};
     if (!vkutil::LoadShaderModule("Shaders/tex_image.frag", device, &triangleFragShader))
     {
-        LogRenderer->Error("Error when building the fragment shader.");
+        LogRenderer->Error("Shader \"{}\" failed to load.", "tex_image.frag");
     }
-    LogRenderer->Trace("Triangle fragment shader successfully loaded.");
+    LogRenderer->Trace("Shader \"{}\" loaded.", "tex_image.frag");
 
     VkShaderModule triangleVertShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle_mesh.vert", device, &triangleVertShader))
     {
-        LogRenderer->Error("Error when building the vertex shader.");
+        LogRenderer->Error("Shader \"{}\" failed to load.", "colored_triangle_mesh.vert");
     }
-    LogRenderer->Trace("Triangle vertex shader successfully loaded.");
+    LogRenderer->Trace("Shader \"{}\" loaded.", "colored_triangle_mesh.vert");
 
     VkPushConstantRange pushConstants
     {
