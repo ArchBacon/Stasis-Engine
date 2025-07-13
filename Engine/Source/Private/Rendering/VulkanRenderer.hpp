@@ -144,7 +144,7 @@ namespace blackbox
         VkSampler defaultSamplerLinear {};
         VkSampler defaultSamplerNearest {};
 
-        VkDescriptorSetLayout singleImageDescriptorLayoutSet {};
+        VkDescriptorSetLayout singleImageDescriptorLayout {};
         
     public:
         VulkanRenderer();

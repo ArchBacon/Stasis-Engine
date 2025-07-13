@@ -301,7 +301,7 @@ void blackbox::VulkanRenderer::DrawGeometry(
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
 
     // Bind a texture
-    VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptor.Allocate(device, singleImageDescriptorLayoutSet);
+    VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptor.Allocate(device, singleImageDescriptorLayout);
     {
         DescriptorWriter writer {};
         writer.WriteImage(0, checkerboardImage.imageView, defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
@@ -310,25 +310,24 @@ void blackbox::VulkanRenderer::DrawGeometry(
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipelineLayout, 0, 1, &imageSet, 0, nullptr);
 
-    /** TODO: Should viewport and scissor stay? */
     // Set dynamic viewport and scissor
-    // const VkViewport viewport
-    // {
-    //     .x = 0.0f,
-    //     .y = 0.0f,
-    //     .width = static_cast<float>(drawExtent.width),
-    //     .height = static_cast<float>(drawExtent.height),
-    //     .minDepth = 0.0f,
-    //     .maxDepth = 1.0f,
-    // };
-    // vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    //
-    // const VkRect2D scissor
-    // {
-    //     .offset = {.x = 0, .y = 0},
-    //     .extent = drawExtent,
-    // };
-    // vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    const VkViewport viewport
+    {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(drawExtent.width),
+        .height = static_cast<float>(drawExtent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    
+    const VkRect2D scissor
+    {
+        .offset = {.x = 0, .y = 0},
+        .extent = drawExtent,
+    };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     mat4 view = translate(mat4(1.0f), float3{0.0f, 0.0f, -5.f});
     mat4 projection = perspective(radians(70.0f), static_cast<float>(drawExtent.width) / static_cast<float>(drawExtent.height), 0.1f, 10000.0f);
@@ -604,7 +603,7 @@ void blackbox::VulkanRenderer::InitDescriptors()
     {
         DescriptorLayoutBuilder builder {};
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        singleImageDescriptorLayoutSet = builder.Build(device, VK_SHADER_STAGE_FRAGMENT_BIT);
+        singleImageDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
     // Allocate a descriptor set for our draw image
@@ -620,8 +619,10 @@ void blackbox::VulkanRenderer::InitDescriptors()
     deletionQueue.Add([&]()
     {
         globalDescriptorAllocator.DestroyPool(device);
+        
         vkDestroyDescriptorSetLayout(device, drawImageDescriptorLayout, nullptr);
         vkDestroyDescriptorSetLayout(device, gpuSceneDataDescriptorLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, singleImageDescriptorLayout, nullptr);
     });
 
     for (auto& frame : frames)
@@ -771,7 +772,7 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstants;
-    pipelineLayoutInfo.pSetLayouts = &singleImageDescriptorLayoutSet;
+    pipelineLayoutInfo.pSetLayouts = &singleImageDescriptorLayout;
     pipelineLayoutInfo.setLayoutCount = 1;
     VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &meshPipelineLayout));
 
