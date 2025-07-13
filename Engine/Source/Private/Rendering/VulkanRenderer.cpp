@@ -300,28 +300,36 @@ void blackbox::VulkanRenderer::DrawGeometry(
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline);
 
+    // Bind a texture
+    VkDescriptorSet imageSet = GetCurrentFrame().frameDescriptor.Allocate(device, singleImageDescriptorLayoutSet);
+    {
+        DescriptorWriter writer {};
+        writer.WriteImage(0, checkerboardImage.imageView, defaultSamplerNearest, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        writer.UpdateSet(device, imageSet);
+    }
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipelineLayout, 0, 1, &imageSet, 0, nullptr);
+
+    /** TODO: Should viewport and scissor stay? */
     // Set dynamic viewport and scissor
-    const VkViewport viewport
-    {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = static_cast<float>(drawExtent.width),
-        .height = static_cast<float>(drawExtent.height),
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f,
-    };
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    // const VkViewport viewport
+    // {
+    //     .x = 0.0f,
+    //     .y = 0.0f,
+    //     .width = static_cast<float>(drawExtent.width),
+    //     .height = static_cast<float>(drawExtent.height),
+    //     .minDepth = 0.0f,
+    //     .maxDepth = 1.0f,
+    // };
+    // vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+    //
+    // const VkRect2D scissor
+    // {
+    //     .offset = {.x = 0, .y = 0},
+    //     .extent = drawExtent,
+    // };
+    // vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    const VkRect2D scissor
-    {
-        .offset = {.x = 0, .y = 0},
-        .extent = drawExtent,
-    };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-    static float rotation = 0.0f;
-    rotation += 1.0f;
-    
     mat4 view = translate(mat4(1.0f), float3{0.0f, 0.0f, -5.f});
     mat4 projection = perspective(radians(70.0f), static_cast<float>(drawExtent.width) / static_cast<float>(drawExtent.height), 0.1f, 10000.0f);
     // Invert the Y-direction on the projection matrix so that we are more similar to opengl and gltf axis
@@ -593,6 +601,11 @@ void blackbox::VulkanRenderer::InitDescriptors()
         builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         gpuSceneDataDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
+    {
+        DescriptorLayoutBuilder builder {};
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        singleImageDescriptorLayoutSet = builder.Build(device, VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
 
     // Allocate a descriptor set for our draw image
     drawImageDescriptors = globalDescriptorAllocator.Allocate(device, drawImageDescriptorLayout);
@@ -735,16 +748,16 @@ void blackbox::VulkanRenderer::InitBackgroundPipelines()
 void blackbox::VulkanRenderer::InitMeshPipeline()
 {
     VkShaderModule triangleFragShader {};
-    if (!vkutil::LoadShaderModule("Shaders/colored_triangle.frag", device, &triangleFragShader))
+    if (!vkutil::LoadShaderModule("Shaders/tex_image.frag", device, &triangleFragShader))
     {
-        LogRenderer->Error("Error when building the mesh fragment shader.");
+        LogRenderer->Error("Error when building the fragment shader.");
     }
     LogRenderer->Trace("Triangle fragment shader successfully loaded.");
 
     VkShaderModule triangleVertShader {};
     if (!vkutil::LoadShaderModule("Shaders/colored_triangle_mesh.vert", device, &triangleVertShader))
     {
-        LogRenderer->Error("Error when building the mesh vertex shader.");
+        LogRenderer->Error("Error when building the vertex shader.");
     }
     LogRenderer->Trace("Triangle vertex shader successfully loaded.");
 
@@ -758,7 +771,8 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = vkinit::PipelineLayoutCreateInfo();
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstants;
-    
+    pipelineLayoutInfo.pSetLayouts = &singleImageDescriptorLayoutSet;
+    pipelineLayoutInfo.setLayoutCount = 1;
     VK_CHECK(vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &meshPipelineLayout));
 
     PipelineBuilder pipelineBuilder {};
@@ -768,7 +782,7 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
     pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.SetMultisamplingNone();
-    pipelineBuilder.EnableBlendingAdditive();
+    pipelineBuilder.DisableBlending();
     pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
     // Connect the image format we will draw into, from draw image
@@ -791,6 +805,51 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
 void blackbox::VulkanRenderer::InitDefaultData()
 {
     testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
+
+    // 3 default textures; white, grey, and black. 1px each.
+    uint32_t white = packUnorm4x8(float4(1));
+    whiteImage = CreateImage(&white, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    uint32_t grey = packUnorm4x8(float4(0.66f, 0.66f, 0.66f, 1));
+    whiteImage = CreateImage(&grey, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    uint32_t black = packUnorm4x8(float4(0));
+    whiteImage = CreateImage(&black, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    // Checkerboard image
+    uint32_t magenta = packUnorm4x8(float4(1, 0, 1, 1));
+    std::array<uint32_t, 16*16> pixels {};
+    for (int y = 0; y < 16; y++)
+    {
+        for (int x = 0; x < 16; x++)
+        {
+            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
+        }
+    }
+    checkerboardImage = CreateImage(pixels.data(), {16, 16, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    VkSamplerCreateInfo sampler
+    {
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_NEAREST,
+        .minFilter = VK_FILTER_NEAREST
+    };
+    vkCreateSampler(device, &sampler, nullptr, &defaultSamplerNearest);
+
+    sampler.magFilter = VK_FILTER_LINEAR;
+    sampler.minFilter = VK_FILTER_LINEAR;
+    vkCreateSampler(device, &sampler, nullptr, &defaultSamplerLinear);
+
+    deletionQueue.Add([&]()
+    {
+        vkDestroySampler(device, defaultSamplerNearest, nullptr);
+        vkDestroySampler(device, defaultSamplerLinear, nullptr);
+
+        DestroyImage(whiteImage);
+        DestroyImage(greyImage);
+        DestroyImage(blackImage);
+        DestroyImage(checkerboardImage);
+    });
 }
 
 void blackbox::VulkanRenderer::CreateSwapchain(
@@ -963,4 +1022,96 @@ void blackbox::VulkanRenderer::DestroyBuffer(
     const AllocatedBuffer& buffer
 ) {
     vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation);
+}
+
+blackbox::AllocatedImage blackbox::VulkanRenderer::CreateImage(
+    const VkExtent3D size,
+    const VkFormat format,
+    const VkImageUsageFlags usage,
+    const bool mipmapped
+) {
+    AllocatedImage image
+    {
+        .imageExtent = size,
+        .imageFormat = format,
+    };
+
+    VkImageCreateInfo imageInfo = vkinit::ImageCreateInfo(format, usage, size);
+    if (mipmapped)
+    {
+        imageInfo.mipLevels = (uint32_t)std::floor(std::log2(std::max(size.width, size.height))) + 1;
+    }
+
+    // Always allocate images on dedicated GPU memory
+    VmaAllocationCreateInfo allocInfo
+    {
+        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+        .requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    };
+
+    // Allocate and create image
+    VK_CHECK(vmaCreateImage(allocator, &imageInfo, &allocInfo, &image.image, &image.allocation, nullptr));
+
+    // If the format is a depth format, we will need to have it use the correct aspect flag
+    VkImageAspectFlags aspectFlag = VK_IMAGE_ASPECT_COLOR_BIT;
+    if (format == VK_FORMAT_D32_SFLOAT)
+    {
+        aspectFlag = VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    // Build an image-view for the image
+    VkImageViewCreateInfo viewInfo = vkinit::ImageviewCreateInfo(format, image.image, aspectFlag);
+    viewInfo.subresourceRange.levelCount = imageInfo.mipLevels;
+
+    VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &image.imageView));
+
+    return image;
+}
+
+blackbox::AllocatedImage blackbox::VulkanRenderer::CreateImage(
+    void* data, 
+    const VkExtent3D size,
+    const VkFormat format,
+    const VkImageUsageFlags usage,
+    const bool mipmapped
+) {
+    const size_t dataSize = size.width * size.height * size.depth * 4;
+    const AllocatedBuffer uploadBuffer = CreateBuffer(dataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    memcpy(uploadBuffer.info.pMappedData, data, dataSize);
+    const AllocatedImage image = CreateImage(size, format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, mipmapped);
+
+    ImmediateSubmit([&](VkCommandBuffer commandBuffer)
+    {
+        vkutil::TransitionImage(commandBuffer, image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+        VkBufferImageCopy copyRegion
+        {
+            .bufferOffset = 0,
+            .bufferRowLength = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .imageExtent = size,
+        };
+
+        // Copy the buffer into the image
+        vkCmdCopyBufferToImage(commandBuffer, uploadBuffer.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+        vkutil::TransitionImage(commandBuffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    });
+
+    DestroyBuffer(uploadBuffer);
+
+    return image;
+}
+
+void blackbox::VulkanRenderer::DestroyImage(
+    const AllocatedImage& image
+) {
+    vkDestroyImageView(device, image.imageView, nullptr);
+    vmaDestroyImage(allocator, image.image, image.allocation);
 }

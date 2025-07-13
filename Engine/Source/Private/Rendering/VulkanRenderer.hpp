@@ -135,7 +135,17 @@ namespace blackbox
 
         GPUSceneData sceneData {};
         VkDescriptorSetLayout gpuSceneDataDescriptorLayout {};
-    
+
+        AllocatedImage whiteImage {};
+        AllocatedImage blackImage {};
+        AllocatedImage greyImage {};
+        AllocatedImage checkerboardImage {};
+
+        VkSampler defaultSamplerLinear {};
+        VkSampler defaultSamplerNearest {};
+
+        VkDescriptorSetLayout singleImageDescriptorLayoutSet {};
+        
     public:
         VulkanRenderer();
         ~VulkanRenderer();
@@ -163,7 +173,6 @@ namespace blackbox
         void InitPipelines();
         void InitBackgroundPipelines();
         void InitMeshPipeline();
-        
         void InitDefaultData();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
@@ -179,5 +188,9 @@ namespace blackbox
 
         AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         void DestroyBuffer(const AllocatedBuffer& buffer);
+
+        AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        void DestroyImage(const AllocatedImage& image);
     };
 }
