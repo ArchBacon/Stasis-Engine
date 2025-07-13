@@ -1,8 +1,13 @@
 #version 460
+
+#extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_buffer_reference : require
 
-layout (location = 0) out vec3 outColor;
-layout (location = 1) out vec2 outUV;
+#include "input_structures.glsl"
+
+layout (location = 0) out vec3 outNormal;
+layout (location = 1) out vec3 outColor;
+layout (location = 2) out vec2 outUV;
 
 struct Vertex
 {
@@ -20,18 +25,17 @@ layout (buffer_reference, std430) readonly buffer VertexBuffer
 
 layout (push_constant) uniform constants
 {
-    mat4 render_matrix;
+    mat4 renderMatrix;
     VertexBuffer vertexBuffer;
 } PushConstants;
 
 void main()
 {
-    // Load vertex data from device adress
     Vertex v = PushConstants.vertexBuffer.vertices[gl_VertexIndex];
-
-    // Output data
-    gl_Position = PushConstants.render_matrix * vec4(v.position, 1.0f);
-    outColor = v.color.xyz;
+    vec4 position = vec4(v.position, 1.0f);
+    
+    gl_Position = sceneData.viewproj * PushConstants.renderMatrix * position;
+    outColor = v.color.xyz * materialData.colorFactors.xyz;
     outUV.x = v.uvX;
     outUV.y = v.uvY;
 }
