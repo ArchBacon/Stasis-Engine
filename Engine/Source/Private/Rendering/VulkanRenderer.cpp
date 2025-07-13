@@ -18,6 +18,109 @@ constexpr bool USE_VALIDATION_LAYERS = false;
 constexpr bool USE_VALIDATION_LAYERS = true;
 #endif
 
+void blackbox::GLTFMetallicRoughness::BuildPipelines(
+    VulkanRenderer* renderer
+) {
+    VkShaderModule meshFragShader {};
+    if (!vkutil::LoadShaderModule("Shaders/mesh.frag", renderer->device, &meshFragShader))
+    {
+        LogRenderer->Error("Error when building the mesh fragment shader module.");
+    }
+    
+    VkShaderModule meshVertexShader {};
+    if (!vkutil::LoadShaderModule("Shaders/mesh.vert", renderer->device, &meshVertexShader))
+    {
+        LogRenderer->Error("Error when building the mesh vertex shader module.");
+    }
+
+    VkPushConstantRange matrixRange
+    {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(GPUDrawPushConstants),
+    };
+
+    DescriptorLayoutBuilder layoutBuilder {};
+    layoutBuilder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    layoutBuilder.AddBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    layoutBuilder.AddBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+
+    materialLayout = layoutBuilder.Build(renderer->device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    VkDescriptorSetLayout layouts[] = {renderer->gpuSceneDataDescriptorLayout, materialLayout};
+
+    VkPipelineLayoutCreateInfo meshLayoutInfo = vkinit::PipelineLayoutCreateInfo();
+    meshLayoutInfo.setLayoutCount = 2;
+    meshLayoutInfo.pSetLayouts = layouts;
+    meshLayoutInfo.pPushConstantRanges = &matrixRange;
+    meshLayoutInfo.pushConstantRangeCount = 1;
+
+    VkPipelineLayout newLayout {};
+    VK_CHECK(vkCreatePipelineLayout(renderer->device, &meshLayoutInfo, nullptr, &newLayout));
+
+    opaquePipeline.layout = newLayout;
+    transparentPipeline.layout = newLayout;
+
+    // Build the stage-create-info for both vertex and fragment stages.
+    // This lets the pipeline know the shader modules per stage
+    PipelineBuilder pipelineBuilder {};
+    pipelineBuilder.SetShaders(meshVertexShader, meshFragShader);
+    pipelineBuilder.SetInputTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    pipelineBuilder.SetPolygonMode(VK_POLYGON_MODE_FILL);
+    pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
+    pipelineBuilder.SetMultisamplingNone();
+    pipelineBuilder.DisableBlending();
+    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
+    // Render format
+    pipelineBuilder.SetColorAttachmentFormat(renderer->drawImage.imageFormat);
+    pipelineBuilder.SetDepthFormat(renderer->depthImage.imageFormat);
+    // Use the triangle layout we created
+    pipelineBuilder.pipelineLayout = newLayout;
+
+    // Finally, build the pipeline
+    opaquePipeline.pipeline = pipelineBuilder.Build(renderer->device);
+
+    // Create the transparent variant
+    pipelineBuilder.EnableBlendingAdditive();
+    pipelineBuilder.EnableDepthTest(false, VK_COMPARE_OP_LESS_OR_EQUAL);
+
+    transparentPipeline.pipeline = pipelineBuilder.Build(renderer->device);
+
+    vkDestroyShaderModule(renderer->device, meshFragShader, nullptr);
+    vkDestroyShaderModule(renderer->device, meshVertexShader, nullptr);
+}
+
+void blackbox::GLTFMetallicRoughness::ClearResources(
+    const VkDevice device
+) {
+    vkDestroyDescriptorSetLayout(device, materialLayout, nullptr);
+    vkDestroyPipelineLayout(device, transparentPipeline.layout, nullptr);
+
+    vkDestroyPipeline(device, transparentPipeline.pipeline, nullptr);
+    vkDestroyPipeline(device, opaquePipeline.pipeline, nullptr);
+}
+
+blackbox::MaterialInstance blackbox::GLTFMetallicRoughness::WriteMaterial(
+    const VkDevice device,
+    const MaterialPass pass,
+    const MaterialResources& resources,
+    DescriptorAllocatorGrowable descriptorAllocator
+) {
+    const MaterialInstance material
+    {
+        .pipeline = (pass == MaterialPass::Transparent) ? &transparentPipeline : &opaquePipeline,
+        .materialSet = descriptorAllocator.Allocate(device, materialLayout),
+        .passType = pass,
+    };
+
+    writer.Clear();
+    writer.WriteBuffer(0, resources.dataBuffer, sizeof(MaterialConstants), resources.dataBufferOffset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+    writer.WriteImage(1, resources.colorImage.imageView, resources.colorSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    writer.WriteImage(1, resources.metallicRoughnessImage.imageView, resources.metallicRoughnessSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    writer.UpdateSet(device, material.materialSet);
+
+    return material;
+}
+
 blackbox::VulkanRenderer::VulkanRenderer()
 {
     VulkanRenderer::Initialize();
@@ -75,7 +178,9 @@ void blackbox::VulkanRenderer::Shutdown()
     {
         DestroyBuffer(mesh->meshBuffers.indexBuffer);
         DestroyBuffer(mesh->meshBuffers.vertexBuffer);
-    } 
+    }
+
+    metallicRoughnessMaterial.ClearResources(device);
 
     deletionQueue.Flush();
     
@@ -583,11 +688,13 @@ void blackbox::VulkanRenderer::InitSyncStructures()
 void blackbox::VulkanRenderer::InitDescriptors()
 {
     // Create a descriptor pool that will hold 10 sets with 1 image each
-    std::vector<DescriptorAllocator::PoolSizeRatio> sizes
+    std::vector<DescriptorAllocatorGrowable::PoolSizeRatio> sizes
     {
         {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .ratio = 1},
+        {.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .ratio = 1},
+        {.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .ratio = 1},
     };
-    globalDescriptorAllocator.InitPool(device, 10, sizes);
+    globalDescriptorAllocator.Init(device, 10, sizes);
 
     // Make the descriptor set a layout for our compute draw
     {
@@ -597,13 +704,13 @@ void blackbox::VulkanRenderer::InitDescriptors()
     }
     {
         DescriptorLayoutBuilder builder {};
-        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        gpuSceneDataDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        singleImageDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_FRAGMENT_BIT);
     }
     {
         DescriptorLayoutBuilder builder {};
-        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        singleImageDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_FRAGMENT_BIT);
+        builder.AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        gpuSceneDataDescriptorLayout = builder.Build(device, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     }
 
     // Allocate a descriptor set for our draw image
@@ -618,11 +725,11 @@ void blackbox::VulkanRenderer::InitDescriptors()
     // Make sure both the descriptor allocators and the new layout get cleaned up properly
     deletionQueue.Add([&]()
     {
-        globalDescriptorAllocator.DestroyPool(device);
+        globalDescriptorAllocator.DestroyPools(device);
         
         vkDestroyDescriptorSetLayout(device, drawImageDescriptorLayout, nullptr);
-        vkDestroyDescriptorSetLayout(device, gpuSceneDataDescriptorLayout, nullptr);
         vkDestroyDescriptorSetLayout(device, singleImageDescriptorLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, gpuSceneDataDescriptorLayout, nullptr);
     });
 
     for (auto& frame : frames)
@@ -653,6 +760,8 @@ void blackbox::VulkanRenderer::InitPipelines()
 
     // Graphics pipelines
     InitMeshPipeline();
+
+    metallicRoughnessMaterial.BuildPipelines(this);
 }
 
 void blackbox::VulkanRenderer::InitBackgroundPipelines()
@@ -805,8 +914,6 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
 
 void blackbox::VulkanRenderer::InitDefaultData()
 {
-    testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
-
     // 3 default textures; white, grey, and black. 1px each.
     uint32_t white = packUnorm4x8(float4(1));
     whiteImage = CreateImage(&white, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -851,6 +958,33 @@ void blackbox::VulkanRenderer::InitDefaultData()
         DestroyImage(blackImage);
         DestroyImage(checkerboardImage);
     });
+
+    GLTFMetallicRoughness::MaterialResources materialResources
+    {
+        .colorImage = whiteImage,
+        .colorSampler = defaultSamplerLinear,
+        .metallicRoughnessImage = whiteImage,
+        .metallicRoughnessSampler = defaultSamplerLinear,
+    };
+
+    // Set the uniform buffer for the material data
+    AllocatedBuffer materialConstants = CreateBuffer(sizeof(GLTFMetallicRoughness::MaterialConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+    // Write the buffer
+    GLTFMetallicRoughness::MaterialConstants* sceneUniformData = static_cast<GLTFMetallicRoughness::MaterialConstants*>(materialConstants.allocation->GetMappedData());
+    sceneUniformData->colorFactors = float4(1);
+    sceneUniformData->metallicRoughnessFactors = float4(1, 0.5, 0, 0);
+
+    deletionQueue.Add([=, this]()
+    {
+        DestroyBuffer(materialConstants);
+    });
+
+    materialResources.dataBuffer = materialConstants.buffer;
+    materialResources.dataBufferOffset = 0;
+    defaultData = metallicRoughnessMaterial.WriteMaterial(device, MaterialPass::MainColor, materialResources, globalDescriptorAllocator);
+
+    testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
 }
 
 void blackbox::VulkanRenderer::CreateSwapchain(

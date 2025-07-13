@@ -13,6 +13,7 @@
 
 namespace blackbox
 {
+    class VulkanRenderer;
     struct MeshAsset;
 
     struct DeletionQueue
@@ -73,10 +74,43 @@ namespace blackbox
         float4 sunlightColor {1.0f, 1.0f, 1.0f, 1.0f};
     };
 
+    struct GLTFMetallicRoughness
+    {
+        MaterialPipeline opaquePipeline {};
+        MaterialPipeline transparentPipeline {};
+        VkDescriptorSetLayout materialLayout {};
+
+        struct MaterialConstants
+        {
+            float4 colorFactors {1.0f};
+            float4 metallicRoughnessFactors {0.0f};
+            float4 extra[14] {}; // Padding, we need it anyway for uniform buffers (256 byte buffers)
+        };
+
+        struct MaterialResources
+        {
+            AllocatedImage colorImage {};
+            VkSampler colorSampler {};
+            AllocatedImage metallicRoughnessImage {};
+            VkSampler metallicRoughnessSampler {};
+            VkBuffer dataBuffer {};
+            uint32_t dataBufferOffset {0};
+        };
+
+        DescriptorWriter writer {};
+
+        void BuildPipelines(VulkanRenderer* renderer);
+        void ClearResources(VkDevice device);
+
+        MaterialInstance WriteMaterial(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable descriptorAllocator);
+    };
+
     constexpr uint8_t FRAME_OVERLAP = 3;
     
     class VulkanRenderer
     {
+        friend struct GLTFMetallicRoughness;
+        
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
         SDL_Window* window {nullptr};
@@ -113,7 +147,7 @@ namespace blackbox
         float renderScale = 1.0f;
 
         // Descriptors
-        DescriptorAllocator globalDescriptorAllocator {};
+        DescriptorAllocatorGrowable globalDescriptorAllocator {};
         VkDescriptorSet drawImageDescriptors {};
         VkDescriptorSetLayout drawImageDescriptorLayout {};
 
@@ -145,6 +179,9 @@ namespace blackbox
         VkSampler defaultSamplerNearest {};
 
         VkDescriptorSetLayout singleImageDescriptorLayout {};
+
+        MaterialInstance defaultData {};
+        GLTFMetallicRoughness metallicRoughnessMaterial {};
         
     public:
         VulkanRenderer();
