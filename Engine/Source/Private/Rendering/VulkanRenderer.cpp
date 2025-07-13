@@ -985,51 +985,6 @@ void blackbox::VulkanRenderer::InitDefaultData()
     defaultData = metallicRoughnessMaterial.WriteMaterial(device, MaterialPass::MainColor, materialResources, globalDescriptorAllocator);
 
     testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
-
-    // 3 default textures; white, grey, and black. 1px each.
-    uint32_t white = packUnorm4x8(float4(1));
-    whiteImage = CreateImage(&white, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    uint32_t grey = packUnorm4x8(float4(0.66f, 0.66f, 0.66f, 1));
-    greyImage = CreateImage(&grey, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    uint32_t black = packUnorm4x8(float4(0));
-    blackImage = CreateImage(&black, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    // Checkerboard image
-    uint32_t magenta = packUnorm4x8(float4(1, 0, 1, 1));
-    std::array<uint32_t, 16*16> pixels {};
-    for (int y = 0; y < 16; y++)
-    {
-        for (int x = 0; x < 16; x++)
-        {
-            pixels[y * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
-        }
-    }
-    checkerboardImage = CreateImage(pixels.data(), {16, 16, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
-
-    VkSamplerCreateInfo sampler
-    {
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_NEAREST,
-        .minFilter = VK_FILTER_NEAREST
-    };
-    vkCreateSampler(device, &sampler, nullptr, &defaultSamplerNearest);
-
-    sampler.magFilter = VK_FILTER_LINEAR;
-    sampler.minFilter = VK_FILTER_LINEAR;
-    vkCreateSampler(device, &sampler, nullptr, &defaultSamplerLinear);
-
-    deletionQueue.Add([&]()
-    {
-        vkDestroySampler(device, defaultSamplerNearest, nullptr);
-        vkDestroySampler(device, defaultSamplerLinear, nullptr);
-
-        DestroyImage(whiteImage);
-        DestroyImage(greyImage);
-        DestroyImage(blackImage);
-        DestroyImage(checkerboardImage);
-    });
 }
 
 void blackbox::VulkanRenderer::CreateSwapchain(
