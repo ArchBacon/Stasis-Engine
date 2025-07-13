@@ -39,9 +39,12 @@ namespace blackbox
     {
         VkCommandPool commandPool {};
         VkCommandBuffer commandBuffer {};
+        
         VkSemaphore swapchainSemaphore {};
         VkFence renderFence {};
+        
         DeletionQueue deletionQueue {};
+        DescriptorAllocatorGrowable frameDescriptor {};
     };
 
     struct ComputePushConstants
@@ -58,6 +61,16 @@ namespace blackbox
         VkPipeline pipeline {};
         VkPipelineLayout layout {};
         ComputePushConstants data {};
+    };
+
+    struct GPUSceneData
+    {
+        mat4 view {1.0f};
+        mat4 proj {1.0f};
+        mat4 viewproj {1.0f};
+        float4 ambientColor {0.2f, 0.2f, 0.2f, 1.0f};
+        float4 sunlightDirection {0.0f, 0.0f, 1.0f, 1.0f}; // W for sun power
+        float4 sunlightColor {1.0f, 1.0f, 1.0f, 1.0f};
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
@@ -119,7 +132,20 @@ namespace blackbox
         VkPipeline meshPipeline {};
 
         std::vector<std::shared_ptr<MeshAsset>> testMeshes {};
-    
+
+        GPUSceneData sceneData {};
+        VkDescriptorSetLayout gpuSceneDataDescriptorLayout {};
+
+        AllocatedImage whiteImage {};
+        AllocatedImage blackImage {};
+        AllocatedImage greyImage {};
+        AllocatedImage checkerboardImage {};
+
+        VkSampler defaultSamplerLinear {};
+        VkSampler defaultSamplerNearest {};
+
+        VkDescriptorSetLayout singleImageDescriptorLayout {};
+        
     public:
         VulkanRenderer();
         ~VulkanRenderer();
@@ -147,7 +173,6 @@ namespace blackbox
         void InitPipelines();
         void InitBackgroundPipelines();
         void InitMeshPipeline();
-        
         void InitDefaultData();
 
         void CreateSwapchain(uint32_t width, uint32_t height);
@@ -163,5 +188,9 @@ namespace blackbox
 
         AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         void DestroyBuffer(const AllocatedBuffer& buffer);
+
+        AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
+        void DestroyImage(const AllocatedImage& image);
     };
 }
