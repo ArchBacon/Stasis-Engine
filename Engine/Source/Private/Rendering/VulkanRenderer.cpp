@@ -812,10 +812,10 @@ void blackbox::VulkanRenderer::InitDefaultData()
     whiteImage = CreateImage(&white, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
 
     uint32_t grey = packUnorm4x8(float4(0.66f, 0.66f, 0.66f, 1));
-    whiteImage = CreateImage(&grey, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+    greyImage = CreateImage(&grey, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
 
     uint32_t black = packUnorm4x8(float4(0));
-    whiteImage = CreateImage(&black, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
+    blackImage = CreateImage(&black, {1, 1, 1}, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT);
 
     // Checkerboard image
     uint32_t magenta = packUnorm4x8(float4(1, 0, 1, 1));
