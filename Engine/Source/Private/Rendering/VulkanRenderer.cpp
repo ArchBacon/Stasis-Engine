@@ -123,6 +123,29 @@ blackbox::MaterialInstance blackbox::GLTFMetallicRoughness::WriteMaterial(
     return material;
 }
 
+void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& context)
+{
+    const mat4 nodeMatrix = topMatrix * worldTransform;
+
+    for (auto& surface : mesh->surfaces)
+    {
+        RenderObject object
+        {
+            .indexCount = surface.count,
+            .firstIndex = surface.startIndex,
+            .indexBuffer = mesh->meshBuffers.indexBuffer.buffer,
+            .material = &surface.material->data,
+
+            .transform = nodeMatrix,
+            .vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress,
+        };
+        context.opaqueSurfaces.push_back(object);
+    } 
+    
+    // Recurse down
+    Node::Draw(topMatrix, context);
+}
+
 blackbox::VulkanRenderer::VulkanRenderer()
 {
     VulkanRenderer::Initialize();
@@ -227,6 +250,8 @@ void blackbox::VulkanRenderer::Draw()
     ImGui::Render();
     // --------------- IMGUI END ---------------
     
+    UpdateScene();
+    
     constexpr uint32_t singleSecond = 1000000000;
     
     // Wait until the GPU has finished rendering the last frame. Timeout of one second
@@ -325,6 +350,32 @@ void blackbox::VulkanRenderer::Draw()
 
     // Increase the number of frames drawn.
     frameNumber++;
+}
+
+void blackbox::VulkanRenderer::UpdateScene()
+{
+    mainDrawContext.opaqueSurfaces.clear();
+    loadedNodes["Suzanne"]->Draw(mat4{1.0f}, mainDrawContext);
+
+    sceneData.view = translate(mat4{1.0f}, float3{0, 0, -5});
+    sceneData.proj = perspective(radians(70.f), (float)windowExtent.width / (float)windowExtent.height, 0.1f, 10000.f);
+
+    // Invert the Y-direction on projection matrix so that we are more similar to OpenGL and GLTF axis
+    sceneData.proj[1][1] *= -1;
+    sceneData.viewproj = sceneData.proj * sceneData.view;
+
+    // Some default lighting parameters
+    sceneData.ambientColor = float4(1.0f);
+    sceneData.sunlightColor = float4(1.0f);
+    sceneData.sunlightDirection = float4(0.0f, 1.f, 0.5f, 1.0f);
+
+    for (int x = -3; x < 3; x++)
+    {
+        mat4 scale = glm::scale(mat4{1.0f}, float3(0.2f));
+        mat4 translation = translate(mat4{1.0f}, float3(x, 1, 0));
+
+        loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
+    }
 }
 
 blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
@@ -436,25 +487,8 @@ void blackbox::VulkanRenderer::DrawGeometry(
     };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    mat4 view = translate(mat4(1.0f), float3{0.0f, 0.0f, -5.f});
-    mat4 projection = perspective(radians(70.0f), static_cast<float>(drawExtent.width) / static_cast<float>(drawExtent.height), 0.1f, 10000.0f);
-    // Invert the Y-direction on the projection matrix so that we are more similar to opengl and gltf axis
-    projection[1][1] *= -1;
-
-    const GPUDrawPushConstants pushConstants
-    {
-        .worldMatrix = projection * view,
-        .vertexBuffer = testMeshes[2]->meshBuffers.vertexBufferAddress,
-    };
-
-    vkCmdPushConstants(commandBuffer, meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
-    vkCmdBindIndexBuffer(commandBuffer, testMeshes[2]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdDrawIndexed(commandBuffer, testMeshes[2]->surfaces[0].count, 1, testMeshes[2]->surfaces[0].startIndex, 0, 0);
-
     // Allocate a new uniform buffer for the scene data
     AllocatedBuffer gpuSceneDataBuffer = CreateBuffer(sizeof(GPUSceneData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-
     // Add it to the deletion queue of this frame so it gets deleted once it's been used
     GetCurrentFrame().deletionQueue.Add([=, this]()
     {
@@ -471,6 +505,24 @@ void blackbox::VulkanRenderer::DrawGeometry(
     DescriptorWriter writer {};
     writer.WriteBuffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.UpdateSet(device, globalDescriptor);
+
+    for (const auto& draw : mainDrawContext.opaqueSurfaces)
+    {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 1, 1, &draw.material->materialSet, 0, nullptr);
+
+        vkCmdBindIndexBuffer(commandBuffer, draw.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        GPUDrawPushConstants pushConstants
+        {
+            .worldMatrix = draw.transform,
+            .vertexBuffer = draw.vertexBufferAddress,
+        };
+        vkCmdPushConstants(commandBuffer, draw.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
+
+        vkCmdDrawIndexed(commandBuffer, draw.indexCount, 1, draw.firstIndex, 0, 0);
+    } 
     
     vkCmdEndRendering(commandBuffer);
 }
@@ -987,6 +1039,22 @@ void blackbox::VulkanRenderer::InitDefaultData()
     defaultData = metallicRoughnessMaterial.WriteMaterial(device, MaterialPass::MainColor, materialResources, globalDescriptorAllocator);
 
     testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
+
+    for (const auto& mesh : testMeshes)
+    {
+        auto node = std::make_shared<MeshNode>();
+        node->mesh = mesh;
+        
+        node->localTransform = mat4{1.0f};
+        node->worldTransform = mat4{1.0f};
+
+        for (auto& geoSurface : node->mesh->surfaces)
+        {
+            geoSurface.material = std::make_shared<GLTFMaterial>(defaultData);
+        }
+
+        loadedNodes[mesh->name] = std::move(node);
+    } 
 }
 
 void blackbox::VulkanRenderer::CreateSwapchain(

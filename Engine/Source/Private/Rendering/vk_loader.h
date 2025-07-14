@@ -9,11 +9,17 @@
 namespace blackbox
 {
     class VulkanRenderer;
+
+    struct GLTFMaterial
+    {
+        MaterialInstance data {};
+    };
     
     struct GeoSurface
     {
         uint32_t startIndex {};
         uint32_t count {};
+        std::shared_ptr<GLTFMaterial> material {nullptr};
     };
 
     struct MeshAsset
