@@ -105,6 +105,30 @@ namespace blackbox
         MaterialInstance WriteMaterial(VkDevice device, MaterialPass pass, const MaterialResources& resources, DescriptorAllocatorGrowable descriptorAllocator);
     };
 
+    struct RenderObject
+    {
+        uint32_t indexCount {1};
+        uint32_t firstIndex {0};
+        VkBuffer indexBuffer {};
+
+        MaterialInstance* material {nullptr};
+
+        mat4 transform {1.0f};
+        VkDeviceAddress vertexBufferAddress {};
+    };
+
+    struct DrawContext
+    {
+        std::vector<RenderObject> opaqueSurfaces {};
+    };
+
+    struct MeshNode : public Node
+    {
+        std::shared_ptr<MeshAsset> mesh {};
+
+        virtual void Draw(const mat4& topMatrix, DrawContext& context) override;
+    };
+
     constexpr uint8_t FRAME_OVERLAP = 3;
     
     class VulkanRenderer
@@ -182,6 +206,9 @@ namespace blackbox
 
         MaterialInstance defaultData {};
         GLTFMetallicRoughness metallicRoughnessMaterial {};
+
+        DrawContext mainDrawContext {};
+        std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes {};
         
     public:
         VulkanRenderer();
@@ -198,6 +225,7 @@ namespace blackbox
 
     public:
         void Draw();
+        void UpdateScene();
 
         GPUMeshBuffers UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
         

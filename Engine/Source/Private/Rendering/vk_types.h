@@ -89,4 +89,42 @@ namespace blackbox
         VkDescriptorSet materialSet {};
         MaterialPass passType {MaterialPass::MainColor};
     };
+
+    struct DrawContext;
+
+    // Base class for a renderable dynamic object
+    class IRenderable
+    {
+        virtual void Draw(const mat4& topMatrix, DrawContext& ctx) = 0;
+    };
+
+    // Implementation of a drawable scene node
+    // The scene node can hold children and will also keep a transform to propagate to them
+    struct Node : public IRenderable
+    {
+        // Parent pointer must be a weak pointer to avoid circular dependencies
+        std::weak_ptr<Node> parent {};
+        std::vector<std::shared_ptr<Node>> children {};
+
+        mat4 localTransform {1.0f};
+        mat4 worldTransform {1.0f};
+
+        void RefreshTransform(const mat4& parentMatrix)
+        {
+            worldTransform = parentMatrix * localTransform;
+            for (const auto& child : children)
+            {
+                child->RefreshTransform(worldTransform);
+            } 
+        }
+
+        virtual void Draw(const mat4& topMatrix, DrawContext& context)
+        {
+            // Draw children
+            for (const auto& child : children)
+            {
+                child->Draw(topMatrix, context);
+            } 
+        }
+    };
 }
