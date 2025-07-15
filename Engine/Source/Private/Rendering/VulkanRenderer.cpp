@@ -176,6 +176,11 @@ void blackbox::VulkanRenderer::Initialize()
     InitPipelines();
     InitImGui();
     InitDefaultData();
+
+    mainCamera.velocity = float3(0.0f);
+    mainCamera.position = float3(0.0f, 0.0f, 5.f);
+    mainCamera.pitch = 0.0f;
+    mainCamera.yaw = 0.0f;
 }
 
 void blackbox::VulkanRenderer::Shutdown()
@@ -281,13 +286,13 @@ void blackbox::VulkanRenderer::Draw()
     // Begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan know that.
     const VkCommandBufferBeginInfo commandBufferBeginInfo = vkinit::CommandBufferBeginInfo(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    drawExtent.width = std::min(swapchainExtent.width, drawImage.imageExtent.width) * renderScale;
-    drawExtent.height = std::min(swapchainExtent.height, drawImage.imageExtent.height) * renderScale;
+    drawExtent.width = static_cast<uint32_t>(static_cast<float>(std::min(swapchainExtent.width, drawImage.imageExtent.width)) * renderScale);
+    drawExtent.height = static_cast<uint32_t>(static_cast<float>(std::min(swapchainExtent.height, drawImage.imageExtent.height)) * renderScale);
 
     VK_CHECK(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));	
 
-    // transition our main draw image into general layout so we can write into it
-    // we will overwrite it all so we dont care about what was the older layout
+    // transition our main draw image into general layout so we can write into it,
+    // we will overwrite it all so we don't care about what was the older layout
     vkutil::TransitionImage(commandBuffer, drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     DrawBackground(commandBuffer);
@@ -357,13 +362,15 @@ void blackbox::VulkanRenderer::UpdateScene()
     mainDrawContext.opaqueSurfaces.clear();
     loadedNodes["Suzanne"]->Draw(mat4{1.0f}, mainDrawContext);
 
-    sceneData.view = translate(mat4{1.0f}, float3{0, 0, -5});
-    sceneData.proj = perspective(radians(70.f), (float)windowExtent.width / (float)windowExtent.height, 0.1f, 10000.f);
+    mainCamera.Update();
+    mat4 view = mainCamera.GetViewMatrix();
+    mat4 projection = perspective(radians(70.f), (float)windowExtent.width / (float)windowExtent.height, 0.1f, 10000.f);
+    projection[1][1] *= -1;
 
-    // Invert the Y-direction on projection matrix so that we are more similar to OpenGL and GLTF axis
-    sceneData.proj[1][1] *= -1;
-    sceneData.viewproj = sceneData.proj * sceneData.view;
-
+    sceneData.view = view;
+    sceneData.proj = projection;
+    sceneData.viewproj = projection * view;
+    
     // Some default lighting parameters
     sceneData.ambientColor = float4(1.0f);
     sceneData.sunlightColor = float4(1.0f);

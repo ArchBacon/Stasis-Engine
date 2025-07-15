@@ -114,8 +114,8 @@ void blackbox::DescriptorAllocatorGrowable::Init(
         ratios.push_back(ratio);
     }
 
-    VkDescriptorPool pool = CreatePool(device, maxSets, ratios);
-    setsPerPool = maxSets * 1.5; // Grow it next allocation
+    const VkDescriptorPool pool = CreatePool(device, maxSets, ratios);
+    setsPerPool = static_cast<uint32_t>(static_cast<float>(maxSets) * 1.5f); // Grow it next allocation
     readyPools.push_back(pool);
 }
 void blackbox::DescriptorAllocatorGrowable::ClearPools(
@@ -197,7 +197,7 @@ VkDescriptorPool blackbox::DescriptorAllocatorGrowable::GetPool(
     }
 
     const VkDescriptorPool pool = CreatePool(device, setsPerPool, ratios);
-    setsPerPool = std::min<uint32_t>(setsPerPool * 1.5f, 4092);
+    setsPerPool = std::min<uint32_t>(static_cast<uint32_t>(static_cast<float>(setsPerPool) * 1.5f), 4092);
 
     return pool;
 }

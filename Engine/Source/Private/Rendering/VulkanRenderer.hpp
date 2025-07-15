@@ -1,14 +1,14 @@
 ﻿#pragma once
 
-#include <vulkan/vulkan.h>
-#include <SDL3/SDL.h>
-#include "vk_types.h"
-#include "vk_initializers.h"
-#include "vk_descriptors.h"
-#include <VkBootstrap.h>
-
 #include <ranges>
+#include <VkBootstrap.h>
+#include <SDL3/SDL.h>
+#include <vulkan/vulkan.h>
 
+#include "camera.h"
+#include "vk_descriptors.h"
+#include "vk_initializers.h"
+#include "vk_types.h"
 #include "Core/Types.hpp"
 
 namespace blackbox
@@ -134,6 +134,7 @@ namespace blackbox
     class VulkanRenderer
     {
         friend struct GLTFMetallicRoughness;
+        friend class Engine;
         
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
@@ -209,6 +210,8 @@ namespace blackbox
 
         DrawContext mainDrawContext {};
         std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes {};
+
+        Camera mainCamera {};
         
     public:
         VulkanRenderer();
