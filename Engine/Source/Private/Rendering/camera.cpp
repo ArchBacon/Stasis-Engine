@@ -28,6 +28,8 @@ void blackbox::Camera::ProcessSdlEvent(
         if (event.key.key == SDLK_S) { velocity.z = 1; }
         if (event.key.key == SDLK_A) { velocity.x = -1; }
         if (event.key.key == SDLK_D) { velocity.x = 1; }
+        if (event.key.key == SDLK_Q) { velocity.y = -1; }
+        if (event.key.key == SDLK_E) { velocity.y = 1; }
     }
 
     if (event.type == SDL_EVENT_KEY_UP)
@@ -36,12 +38,19 @@ void blackbox::Camera::ProcessSdlEvent(
         if (event.key.key == SDLK_S) { velocity.z = 0; }
         if (event.key.key == SDLK_A) { velocity.x = 0; }
         if (event.key.key == SDLK_D) { velocity.x = 0; }
+        if (event.key.key == SDLK_Q) { velocity.y = 0; }
+        if (event.key.key == SDLK_E) { velocity.y = 0; }
     }
 
-    if (event.type == SDL_EVENT_MOUSE_MOTION)
+    // If left mouse button is pressed
+    if (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
     {
-        yaw += (float)event.motion.xrel / 200.f;
-        pitch += (float)event.motion.yrel / 200.f;
+        // Rotate the camera based on mouse movement
+        if (event.type == SDL_EVENT_MOUSE_MOTION)
+        {
+            yaw += (float)event.motion.xrel / 200.f;
+            pitch += -((float)event.motion.yrel / 200.f);
+        }
     }
 }
 
