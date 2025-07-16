@@ -19,17 +19,18 @@ glm::mat4 blackbox::Camera::GetRotationMatrix()
     return mat4_cast(yawRotation) * mat4_cast(pitchRotation);
 }
 
+// TODO: make framerate independent
 void blackbox::Camera::ProcessSdlEvent(
     const SDL_Event& event
 ) {
     if (event.type == SDL_EVENT_KEY_DOWN)
     {
-        if (event.key.key == SDLK_W) { velocity.z = -1; }
-        if (event.key.key == SDLK_S) { velocity.z = 1; }
-        if (event.key.key == SDLK_A) { velocity.x = -1; }
-        if (event.key.key == SDLK_D) { velocity.x = 1; }
-        if (event.key.key == SDLK_Q) { velocity.y = -1; }
-        if (event.key.key == SDLK_E) { velocity.y = 1; }
+        if (event.key.key == SDLK_W) { velocity.z = -1 * (moveSpeed); }
+        if (event.key.key == SDLK_S) { velocity.z =  1 * (moveSpeed); }
+        if (event.key.key == SDLK_A) { velocity.x = -1 * (moveSpeed); }
+        if (event.key.key == SDLK_D) { velocity.x =  1 * (moveSpeed); }
+        if (event.key.key == SDLK_Q) { velocity.y = -1 * (moveSpeed); }
+        if (event.key.key == SDLK_E) { velocity.y =  1 * (moveSpeed); }
     }
 
     if (event.type == SDL_EVENT_KEY_UP)
@@ -42,14 +43,20 @@ void blackbox::Camera::ProcessSdlEvent(
         if (event.key.key == SDLK_E) { velocity.y = 0; }
     }
 
-    // If left mouse button is pressed
+    // If right mouse button is pressed
     if (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_RMASK)
     {
         // Rotate the camera based on mouse movement
         if (event.type == SDL_EVENT_MOUSE_MOTION)
         {
-            yaw += (float)event.motion.xrel / 200.f;
-            pitch += -((float)event.motion.yrel / 200.f);
+            yaw += event.motion.xrel / 200.f;
+            pitch += (event.motion.yrel / 200.f) * (1.f - ((float)inverseY * 2.f));
+        }
+
+        if (event.type == SDL_EVENT_MOUSE_WHEEL)
+        {
+            moveSpeed += event.wheel.y * stepSize;
+            moveSpeed = clamp(moveSpeed, stepSize, 10.0f);
         }
     }
 }
