@@ -50,6 +50,7 @@ void blackbox::Engine::Run()
                 stopRendering = false;
             }
 
+            renderer->mainCamera.ProcessSdlEvent(event);
             ImGui_ImplSDL3_ProcessEvent(&event);
         }
 

@@ -2,6 +2,9 @@
 
 #include <glm/glm.hpp>
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/detail/type_quat.hpp"
+#include "glm/ext/quaternion_trigonometric.hpp"
+#include "glm/gtc/quaternion.hpp"
 
 namespace blackbox
 {
