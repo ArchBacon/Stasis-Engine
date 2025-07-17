@@ -21,7 +21,7 @@ namespace blackbox
 
         std::visit(
             fastgltf::visitor {
-                [](auto& arg) {},
+                []([[maybe_unused]] auto& arg) {},
                 [&](fastgltf::sources::URI& filePath) {
                     assert(filePath.fileByteOffset == 0);
                     assert(filePath.uri.isLocalPath());
@@ -58,7 +58,7 @@ namespace blackbox
 
                     std::visit(
                         fastgltf::visitor {
-                            [](auto& arg) {},
+                            []([[maybe_unused]] auto& arg) {},
                             [&](fastgltf::sources::Array& array) {
                                 if (unsigned char* data = stbi_load_from_memory(
                                     reinterpret_cast<stbi_uc const*>(array.bytes.data() + bufferView.byteOffset),
