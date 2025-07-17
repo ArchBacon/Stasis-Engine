@@ -11,6 +11,86 @@
 #include <fastgltf/tools.hpp>
 #include "fastgltf/core.hpp"
 
+namespace blackbox
+{
+    std::optional<AllocatedImage> LoadGLTFImage(VulkanRenderer* renderer, fastgltf::Asset& asset, fastgltf::Image& image)
+    {
+        AllocatedImage newImage {};
+
+        int width, height, nrChannels;
+
+        std::visit(
+            fastgltf::visitor {
+                [](auto& arg) {},
+                [&](fastgltf::sources::URI& filePath) {
+                    assert(filePath.fileByteOffset == 0);
+                    assert(filePath.uri.isLocalPath());
+
+                    const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
+                    if (unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4))
+                    {
+                        VkExtent3D imageSize;
+                        imageSize.width  = width;
+                        imageSize.height = height;
+                        imageSize.depth  = 1;
+
+                        newImage = renderer->CreateImage(data, imageSize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
+
+                        stbi_image_free(data);
+                    }
+                },
+                [&](fastgltf::sources::Array& array) {
+                    if (unsigned char* data = stbi_load_from_memory(reinterpret_cast<stbi_uc const*>(array.bytes.data()), static_cast<int>(array.bytes.size()), &width, &height, &nrChannels, 4))
+                    {
+                        VkExtent3D imageSize;
+                        imageSize.width  = width;
+                        imageSize.height = height;
+                        imageSize.depth  = 1;
+
+                        newImage = renderer->CreateImage(data, imageSize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
+
+                        stbi_image_free(data);
+                    }
+                },
+                [&](fastgltf::sources::BufferView& view) {
+                    auto& bufferView = asset.bufferViews[view.bufferViewIndex];
+                    auto& buffer     = asset.buffers[bufferView.bufferIndex];
+
+                    std::visit(
+                        fastgltf::visitor {
+                            [](auto& arg) {},
+                            [&](fastgltf::sources::Array& array) {
+                                if (unsigned char* data = stbi_load_from_memory(
+                                    reinterpret_cast<stbi_uc const*>(array.bytes.data() + bufferView.byteOffset),
+                                    static_cast<int>(bufferView.byteLength),
+                                    &width,
+                                    &height,
+                                    &nrChannels,
+                                    4))
+                                {
+                                    VkExtent3D imageSize;
+                                    imageSize.width  = width;
+                                    imageSize.height = height;
+                                    imageSize.depth  = 1;
+
+                                    newImage = renderer->CreateImage(data, imageSize, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_SAMPLED_BIT, true);
+
+                                    stbi_image_free(data);
+                                }
+                            }},
+                        buffer.data);
+                },
+            },
+            image.data);
+        if (newImage.image == VK_NULL_HANDLE)
+        {
+            return {};
+        }
+        
+        return newImage;
+    }
+}
+
 VkFilter ExtractFilter(const fastgltf::Filter filter)
 {
     switch (filter)
@@ -57,6 +137,29 @@ void blackbox::LoadedGLTF::Draw(
 
 void blackbox::LoadedGLTF::ClearAll()
 {
+    const VkDevice device = creator->device;
+
+    descriptorPool.DestroyPools(device);
+    creator->DestroyBuffer(materialDataBuffer);
+
+    for (const auto& v : meshes | std::views::values) {
+
+        creator->DestroyBuffer(v->meshBuffers.indexBuffer);
+        creator->DestroyBuffer(v->meshBuffers.vertexBuffer);
+    }
+
+    for (auto& v : images | std::views::values) {
+        
+        if (v.image == creator->checkerboardImage.image) {
+            // Dont destroy the default images
+            continue;
+        }
+        creator->DestroyImage(v);
+    }
+
+    for (const auto& sampler : samplers) {
+        vkDestroySampler(device, sampler, nullptr);
+    }
 }
 
 std::optional<std::shared_ptr<blackbox::LoadedGLTF>> blackbox::LoadGLTF(VulkanRenderer* renderer, const std::filesystem::path& filePath)
@@ -68,14 +171,14 @@ std::optional<std::shared_ptr<blackbox::LoadedGLTF>> blackbox::LoadGLTF(VulkanRe
     LoadedGLTF& file = *scene.get();
 
     fastgltf::Parser parser {};
-    constexpr auto gltfOptions = fastgltf::Options::DontRequireValidAssetMember | fastgltf::Options::AllowDouble | fastgltf::Options::LoadExternalBuffers;
+    constexpr auto gltfOptions = fastgltf::Options::DontRequireValidAssetMember | fastgltf::Options::AllowDouble | fastgltf::Options::LoadExternalBuffers | fastgltf::Options::LoadExternalImages;
 
     auto gltfFile = fastgltf::GltfDataBuffer::FromPath(filePath);
     if (!static_cast<bool>(gltfFile))
     {
         LogRenderer->Error("Failed to load GLTF file: {}. Reason: {}.", filePath.string(), fastgltf::getErrorMessage(gltfFile.error()));
     }
-    fastgltf::Asset gltf{};
+    fastgltf::Asset gltf {};
     std::filesystem::path path = filePath;
     
     auto type = fastgltf::determineGltfFileType(gltfFile.get());
@@ -140,9 +243,21 @@ std::optional<std::shared_ptr<blackbox::LoadedGLTF>> blackbox::LoadGLTF(VulkanRe
     std::vector<AllocatedImage> images {};
     std::vector<std::shared_ptr<GLTFMaterial>> materials {};
 
+    // Load all textures
     for (fastgltf::Image& image : gltf.images)
-    {
-        images.push_back(renderer->checkerboardImage);
+    {        
+        std::optional<AllocatedImage> img = LoadGLTFImage(renderer, gltf, image);
+        if (img.has_value())
+        {
+            images.push_back(*img);
+            file.images[image.name.c_str()] = *img;
+        }
+        else
+        {
+            // We failed to load, so let's give the slot a default texture to not completely break loading
+            images.push_back(renderer->checkerboardImage);
+            LogRenderer->Warn("GLTF failed to load texture {}", image.name);
+        }
     }
 
     // Create the buffer to hold the material data

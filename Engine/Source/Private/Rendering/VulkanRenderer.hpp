@@ -11,6 +11,7 @@
 #include "vk_initializers.h"
 #include "vk_types.h"
 #include "Core/Types.hpp"
+#include "fastgltf/types.hpp"
 
 namespace blackbox
 {
@@ -135,10 +136,7 @@ namespace blackbox
     
     class VulkanRenderer
     {
-        friend struct GLTFMetallicRoughness;
-        friend std::optional<std::shared_ptr<LoadedGLTF>> LoadGLTF(VulkanRenderer* renderer, const std::filesystem::path& filePath);
-        friend class Engine;
-        
+    public:
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
         SDL_Window* window {nullptr};
@@ -258,9 +256,11 @@ namespace blackbox
         void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
         void InitImGui();
 
+    public:
         AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         void DestroyBuffer(const AllocatedBuffer& buffer);
 
+    public:
         AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         void DestroyImage(const AllocatedImage& image);
