@@ -139,7 +139,15 @@ void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& ctx)
             .transform = nodeMatrix,
             .vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress,
         };
-        ctx.opaqueSurfaces.push_back(object);
+
+        if (surface.material->data.passType == MaterialPass::Transparent)
+        {
+            ctx.transparentSurfaces.push_back(object);
+        }
+        else
+        {
+            ctx.opaqueSurfaces.push_back(object);
+        }
     } 
     
     // Recurse down
@@ -371,6 +379,8 @@ void blackbox::VulkanRenderer::Draw()
 void blackbox::VulkanRenderer::UpdateScene()
 {
     mainDrawContext.opaqueSurfaces.clear();
+    mainDrawContext.transparentSurfaces.clear();
+    
     loadedScenes["structure"]->Draw(mat4{1.0f}, mainDrawContext);
 
     mainCamera.Update();
@@ -383,9 +393,9 @@ void blackbox::VulkanRenderer::UpdateScene()
     sceneData.viewproj = projection * view;
     
     // Some default lighting parameters
-    sceneData.ambientColor = float4(1.0f);
-    sceneData.sunlightColor = float4(1.0f);
-    sceneData.sunlightDirection = float4(0.0f, 1.f, 0.5f, 1.0f);
+    sceneData.ambientColor = float4(0.1f, 0.1f, 0.1f, 1.0f);
+    sceneData.sunlightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    sceneData.sunlightDirection = float4(0.0f, 1.0f, 0.5f, 1.0f);
 }
 
 blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
@@ -516,23 +526,33 @@ void blackbox::VulkanRenderer::DrawGeometry(
     writer.WriteBuffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.UpdateSet(device, globalDescriptor);
 
-    for (const auto& draw : mainDrawContext.opaqueSurfaces)
+    auto draw = [&](const RenderObject& object)
     {
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 1, 1, &draw.material->materialSet, 0, nullptr);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->materialSet, 0, nullptr);
 
-        vkCmdBindIndexBuffer(commandBuffer, draw.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         GPUDrawPushConstants pushConstants
         {
-            .worldMatrix = draw.transform,
-            .vertexBuffer = draw.vertexBufferAddress,
+            .worldMatrix = object.transform,
+            .vertexBuffer = object.vertexBufferAddress,
         };
-        vkCmdPushConstants(commandBuffer, draw.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
+        vkCmdPushConstants(commandBuffer, object.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
 
-        vkCmdDrawIndexed(commandBuffer, draw.indexCount, 1, draw.firstIndex, 0, 0);
-    } 
+        vkCmdDrawIndexed(commandBuffer, object.indexCount, 1, object.firstIndex, 0, 0);
+    };
+
+    for (auto& object : mainDrawContext.opaqueSurfaces)
+    {
+        draw(object);
+    }
+
+    for (auto& object : mainDrawContext.transparentSurfaces)
+    {
+        draw(object);
+    }
     
     vkCmdEndRendering(commandBuffer);
 }
@@ -957,7 +977,7 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.SetMultisamplingNone();
     pipelineBuilder.DisableBlending();
-    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
+    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
     // Connect the image format we will draw into, from draw image
     pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);

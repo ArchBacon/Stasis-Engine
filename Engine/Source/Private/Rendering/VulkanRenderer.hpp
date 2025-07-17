@@ -123,6 +123,7 @@ namespace blackbox
     struct DrawContext
     {
         std::vector<RenderObject> opaqueSurfaces {};
+        std::vector<RenderObject> transparentSurfaces {};
     };
 
     struct MeshNode : public Node
