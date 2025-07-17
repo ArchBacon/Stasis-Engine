@@ -83,7 +83,9 @@ project "Engine"
 
     postbuildcommands {
         -- Copy SDL3.dll to engine executable location
-        "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}"
+        "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}",
+        "{COPY} %{wks.location}Engine/Shaders/*.spv %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Shaders",
+        "{COPY} %{wks.location}Engine/Content/** %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Content",
     }
 
     filter "configurations:Debug"
