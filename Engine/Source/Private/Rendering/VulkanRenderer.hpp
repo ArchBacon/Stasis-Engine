@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <filesystem>
 #include <ranges>
 #include <VkBootstrap.h>
 #include <SDL3/SDL.h>
@@ -13,6 +14,7 @@
 
 namespace blackbox
 {
+    struct LoadedGLTF;
     class VulkanRenderer;
     struct MeshAsset;
 
@@ -126,7 +128,7 @@ namespace blackbox
     {
         std::shared_ptr<MeshAsset> mesh {};
 
-        virtual void Draw(const mat4& topMatrix, DrawContext& context) override;
+        virtual void Draw(const mat4& topMatrix, DrawContext& ctx) override;
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
@@ -134,6 +136,7 @@ namespace blackbox
     class VulkanRenderer
     {
         friend struct GLTFMetallicRoughness;
+        friend std::optional<std::shared_ptr<LoadedGLTF>> LoadGLTF(VulkanRenderer* renderer, const std::filesystem::path& filePath);
         friend class Engine;
         
         uint32_t frameNumber {0};
@@ -210,7 +213,8 @@ namespace blackbox
 
         DrawContext mainDrawContext {};
         std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes {};
-
+        
+        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loadedScenes {};
         Camera mainCamera {};
         
     public:

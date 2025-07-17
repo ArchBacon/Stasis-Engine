@@ -123,7 +123,7 @@ blackbox::MaterialInstance blackbox::GLTFMetallicRoughness::WriteMaterial(
     return material;
 }
 
-void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& context)
+void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& ctx)
 {
     const mat4 nodeMatrix = topMatrix * worldTransform;
 
@@ -139,11 +139,11 @@ void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& context)
             .transform = nodeMatrix,
             .vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress,
         };
-        context.opaqueSurfaces.push_back(object);
+        ctx.opaqueSurfaces.push_back(object);
     } 
     
     // Recurse down
-    Node::Draw(topMatrix, context);
+    Node::Draw(topMatrix, ctx);
 }
 
 blackbox::VulkanRenderer::VulkanRenderer()
@@ -181,12 +181,23 @@ void blackbox::VulkanRenderer::Initialize()
     mainCamera.position = float3(0.0f, 0.0f, 5.f);
     mainCamera.pitch = 0.0f;
     mainCamera.yaw = 0.0f;
+
+    const std::string structurePath {"Content/structure.glb"};
+    auto structureFile = LoadGLTF(this, structurePath);
+
+    if (!structureFile.has_value())
+    {
+        LogRenderer->Error("structure file has no value.");
+    }
+    loadedScenes["structure"] = *structureFile;
 }
 
 void blackbox::VulkanRenderer::Shutdown()
 {
     // Make sure the GPU has stopped doing its thing
     vkDeviceWaitIdle(device);
+
+    loadedScenes.clear();
 
     for (auto& frame : frames)
     {
@@ -360,7 +371,7 @@ void blackbox::VulkanRenderer::Draw()
 void blackbox::VulkanRenderer::UpdateScene()
 {
     mainDrawContext.opaqueSurfaces.clear();
-    loadedNodes["Suzanne"]->Draw(mat4{1.0f}, mainDrawContext);
+    loadedScenes["structure"]->Draw(mat4{1.0f}, mainDrawContext);
 
     mainCamera.Update();
     mat4 view = mainCamera.GetViewMatrix();
@@ -375,14 +386,6 @@ void blackbox::VulkanRenderer::UpdateScene()
     sceneData.ambientColor = float4(1.0f);
     sceneData.sunlightColor = float4(1.0f);
     sceneData.sunlightDirection = float4(0.0f, 1.f, 0.5f, 1.0f);
-
-    for (int x = -3; x < 3; x++)
-    {
-        mat4 scale = glm::scale(mat4{1.0f}, float3(0.2f));
-        mat4 translation = translate(mat4{1.0f}, float3(x, 1, 0));
-
-        loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
-    }
 }
 
 blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
@@ -1045,7 +1048,7 @@ void blackbox::VulkanRenderer::InitDefaultData()
     materialResources.dataBufferOffset = 0;
     defaultData = metallicRoughnessMaterial.WriteMaterial(device, MaterialPass::MainColor, materialResources, globalDescriptorAllocator);
 
-    testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
+    // testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
 
     for (const auto& mesh : testMeshes)
     {

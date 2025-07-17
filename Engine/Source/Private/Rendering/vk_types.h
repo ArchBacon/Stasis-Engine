@@ -118,12 +118,12 @@ namespace blackbox
             } 
         }
 
-        virtual void Draw(const mat4& topMatrix, DrawContext& context)
+        virtual void Draw(const mat4& topMatrix, DrawContext& ctx)
         {
             // Draw children
             for (const auto& child : children)
             {
-                child->Draw(topMatrix, context);
+                child->Draw(topMatrix, ctx);
             } 
         }
     };
