@@ -15,7 +15,7 @@ namespace blackbox
 
         bool inverseY {true};
 
-        float stepSize {0.01f};
+        float stepSize {0.1f};
         float moveSpeed {0.1f};
 
         mat4 GetViewMatrix();

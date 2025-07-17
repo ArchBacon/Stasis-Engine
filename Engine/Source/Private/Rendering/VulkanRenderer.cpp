@@ -271,6 +271,26 @@ void blackbox::VulkanRenderer::Draw()
     }
     ImGui::End();
 
+    if (ImGui::Begin("Camera"))
+    {
+        ImGui::Text("Speed: ");
+        ImGui::SameLine();
+        ImGui::Text(std::to_string(mainCamera.moveSpeed).c_str());
+        ImGui::Text("Step size: ");
+        ImGui::SameLine();
+        ImGui::Text(std::to_string(mainCamera.stepSize).c_str());
+        ImGui::Checkbox("Inverse camera Y", &mainCamera.inverseY);
+        
+        ImGui::Text("Velocity: ");
+        ImGui::SameLine();
+        ImGui::Text("x:%.3f, y:%.3f, z:%.3f", mainCamera.velocity.x, mainCamera.velocity.y, mainCamera.velocity.z);
+
+        ImGui::Text("Rotation: ");
+        ImGui::SameLine();
+        ImGui::Text("p:%.3f, y:%.3f, r:%.3f", mainCamera.pitch, mainCamera.yaw, 0.0f);
+    }
+    ImGui::End();
+
     ImGui::Render();
     // --------------- IMGUI END ---------------
     
