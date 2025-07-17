@@ -117,13 +117,13 @@ blackbox::MaterialInstance blackbox::GLTFMetallicRoughness::WriteMaterial(
     writer.Clear();
     writer.WriteBuffer(0, resources.dataBuffer, sizeof(MaterialConstants), resources.dataBufferOffset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.WriteImage(1, resources.colorImage.imageView, resources.colorSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    writer.WriteImage(1, resources.metallicRoughnessImage.imageView, resources.metallicRoughnessSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    writer.WriteImage(2, resources.metallicRoughnessImage.imageView, resources.metallicRoughnessSampler, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     writer.UpdateSet(device, material.materialSet);
 
     return material;
 }
 
-void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& context)
+void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& ctx)
 {
     const mat4 nodeMatrix = topMatrix * worldTransform;
 
@@ -139,11 +139,19 @@ void blackbox::MeshNode::Draw(const mat4& topMatrix, DrawContext& context)
             .transform = nodeMatrix,
             .vertexBufferAddress = mesh->meshBuffers.vertexBufferAddress,
         };
-        context.opaqueSurfaces.push_back(object);
+
+        if (surface.material->data.passType == MaterialPass::Transparent)
+        {
+            ctx.transparentSurfaces.push_back(object);
+        }
+        else
+        {
+            ctx.opaqueSurfaces.push_back(object);
+        }
     } 
     
     // Recurse down
-    Node::Draw(topMatrix, context);
+    Node::Draw(topMatrix, ctx);
 }
 
 blackbox::VulkanRenderer::VulkanRenderer()
@@ -181,12 +189,23 @@ void blackbox::VulkanRenderer::Initialize()
     mainCamera.position = float3(0.0f, 0.0f, 5.f);
     mainCamera.pitch = 0.0f;
     mainCamera.yaw = 0.0f;
+
+    const std::string structurePath {"Content/structure.glb"};
+    auto structureFile = LoadGLTF(this, structurePath);
+
+    if (!structureFile.has_value())
+    {
+        LogRenderer->Error("structure file has no value.");
+    }
+    loadedScenes["structure"] = *structureFile;
 }
 
 void blackbox::VulkanRenderer::Shutdown()
 {
     // Make sure the GPU has stopped doing its thing
     vkDeviceWaitIdle(device);
+
+    loadedScenes.clear();
 
     for (auto& frame : frames)
     {
@@ -360,7 +379,9 @@ void blackbox::VulkanRenderer::Draw()
 void blackbox::VulkanRenderer::UpdateScene()
 {
     mainDrawContext.opaqueSurfaces.clear();
-    loadedNodes["Suzanne"]->Draw(mat4{1.0f}, mainDrawContext);
+    mainDrawContext.transparentSurfaces.clear();
+    
+    loadedScenes["structure"]->Draw(mat4{1.0f}, mainDrawContext);
 
     mainCamera.Update();
     mat4 view = mainCamera.GetViewMatrix();
@@ -372,17 +393,9 @@ void blackbox::VulkanRenderer::UpdateScene()
     sceneData.viewproj = projection * view;
     
     // Some default lighting parameters
-    sceneData.ambientColor = float4(1.0f);
-    sceneData.sunlightColor = float4(1.0f);
-    sceneData.sunlightDirection = float4(0.0f, 1.f, 0.5f, 1.0f);
-
-    for (int x = -3; x < 3; x++)
-    {
-        mat4 scale = glm::scale(mat4{1.0f}, float3(0.2f));
-        mat4 translation = translate(mat4{1.0f}, float3(x, 1, 0));
-
-        loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
-    }
+    sceneData.ambientColor = float4(0.1f, 0.1f, 0.1f, 1.0f);
+    sceneData.sunlightColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    sceneData.sunlightDirection = float4(0.0f, 1.0f, 0.5f, 1.0f);
 }
 
 blackbox::GPUMeshBuffers blackbox::VulkanRenderer::UploadMesh(
@@ -513,23 +526,33 @@ void blackbox::VulkanRenderer::DrawGeometry(
     writer.WriteBuffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
     writer.UpdateSet(device, globalDescriptor);
 
-    for (const auto& draw : mainDrawContext.opaqueSurfaces)
+    auto draw = [&](const RenderObject& object)
     {
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->layout, 1, 1, &draw.material->materialSet, 0, nullptr);
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->pipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 0, 1, &globalDescriptor, 0, nullptr);
+        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->pipeline->layout, 1, 1, &object.material->materialSet, 0, nullptr);
 
-        vkCmdBindIndexBuffer(commandBuffer, draw.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(commandBuffer, object.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
         GPUDrawPushConstants pushConstants
         {
-            .worldMatrix = draw.transform,
-            .vertexBuffer = draw.vertexBufferAddress,
+            .worldMatrix = object.transform,
+            .vertexBuffer = object.vertexBufferAddress,
         };
-        vkCmdPushConstants(commandBuffer, draw.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
+        vkCmdPushConstants(commandBuffer, object.material->pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &pushConstants);
 
-        vkCmdDrawIndexed(commandBuffer, draw.indexCount, 1, draw.firstIndex, 0, 0);
-    } 
+        vkCmdDrawIndexed(commandBuffer, object.indexCount, 1, object.firstIndex, 0, 0);
+    };
+
+    for (auto& object : mainDrawContext.opaqueSurfaces)
+    {
+        draw(object);
+    }
+
+    for (auto& object : mainDrawContext.transparentSurfaces)
+    {
+        draw(object);
+    }
     
     vkCmdEndRendering(commandBuffer);
 }
@@ -954,7 +977,7 @@ void blackbox::VulkanRenderer::InitMeshPipeline()
     pipelineBuilder.SetCullMode(VK_CULL_MODE_NONE, VK_FRONT_FACE_CLOCKWISE);
     pipelineBuilder.SetMultisamplingNone();
     pipelineBuilder.DisableBlending();
-    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_LESS_OR_EQUAL);
+    pipelineBuilder.EnableDepthTest(true, VK_COMPARE_OP_GREATER_OR_EQUAL);
 
     // Connect the image format we will draw into, from draw image
     pipelineBuilder.SetColorAttachmentFormat(drawImage.imageFormat);
@@ -1045,7 +1068,7 @@ void blackbox::VulkanRenderer::InitDefaultData()
     materialResources.dataBufferOffset = 0;
     defaultData = metallicRoughnessMaterial.WriteMaterial(device, MaterialPass::MainColor, materialResources, globalDescriptorAllocator);
 
-    testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
+    // testMeshes = LoadGltfMesh(this, "Content/basicmesh.glb").value();
 
     for (const auto& mesh : testMeshes)
     {

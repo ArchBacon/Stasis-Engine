@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <filesystem>
 #include <ranges>
 #include <VkBootstrap.h>
 #include <SDL3/SDL.h>
@@ -10,9 +11,11 @@
 #include "vk_initializers.h"
 #include "vk_types.h"
 #include "Core/Types.hpp"
+#include "fastgltf/types.hpp"
 
 namespace blackbox
 {
+    struct LoadedGLTF;
     class VulkanRenderer;
     struct MeshAsset;
 
@@ -120,22 +123,21 @@ namespace blackbox
     struct DrawContext
     {
         std::vector<RenderObject> opaqueSurfaces {};
+        std::vector<RenderObject> transparentSurfaces {};
     };
 
     struct MeshNode : public Node
     {
         std::shared_ptr<MeshAsset> mesh {};
 
-        virtual void Draw(const mat4& topMatrix, DrawContext& context) override;
+        virtual void Draw(const mat4& topMatrix, DrawContext& ctx) override;
     };
 
     constexpr uint8_t FRAME_OVERLAP = 3;
     
     class VulkanRenderer
     {
-        friend struct GLTFMetallicRoughness;
-        friend class Engine;
-        
+    public:
         uint32_t frameNumber {0};
         VkExtent2D windowExtent {1024, 576};
         SDL_Window* window {nullptr};
@@ -210,7 +212,8 @@ namespace blackbox
 
         DrawContext mainDrawContext {};
         std::unordered_map<std::string, std::shared_ptr<Node>> loadedNodes {};
-
+        
+        std::unordered_map<std::string, std::shared_ptr<LoadedGLTF>> loadedScenes {};
         Camera mainCamera {};
         
     public:
@@ -254,9 +257,11 @@ namespace blackbox
         void ImmediateSubmit(std::function<void(VkCommandBuffer)>&& callback);
         void InitImGui();
 
+    public:
         AllocatedBuffer CreateBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         void DestroyBuffer(const AllocatedBuffer& buffer);
 
+    public:
         AllocatedImage CreateImage(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         AllocatedImage CreateImage(void* data, VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
         void DestroyImage(const AllocatedImage& image);
