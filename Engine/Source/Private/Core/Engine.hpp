@@ -1,25 +1,28 @@
 ﻿#pragma once
 
-#include "Core/Types.hpp"
+#include <memory>
 
-struct SDL_Window;
+#include "Core/Types.hpp"
 
 namespace blackbox
 {
-class Engine
-{
-    bool stopRendering {false};
-    bool isRunning {true};
-    unsigned int frameNumber {0};
-    int2 windowExtent {1024, 576};
-
-    SDL_Window* window {nullptr};
+    class Window;
     
-public:
-    void Initialize();
-    void Run();
-    void Shutdown();
-};
+    class Engine
+    {
+        std::unique_ptr<Window> window {nullptr};
+        
+        bool stopRendering {false};
+        bool isRunning {true};
+        uint32_t frameNumber {0};
+        
+    public:
+        void Initialize();
+        void Run();
+        void Shutdown();
+
+        [[nodiscard]] Window& Window() const { return *window; }
+    };
 }
 
 extern blackbox::Engine Engine;

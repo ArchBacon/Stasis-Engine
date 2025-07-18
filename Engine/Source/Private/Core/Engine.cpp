@@ -1,9 +1,11 @@
 ﻿#include "Engine.hpp"
 
 #include <chrono>
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
+
+#include <SDL3/SDL_events.h>
+
 #include "Blackbox.hpp"
+#include "Core/Window.h"
 
 blackbox::Engine Engine;
 
@@ -11,22 +13,7 @@ void blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
-    SDL_Init(SDL_INIT_VIDEO);
-
-    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
-
-    // TODO: make into util
-    std::string buildModeSuffix {};
-    #ifdef DEBUG
-        buildModeSuffix = " [DEBUG]";
-    #elif defined DEVELOPMENT
-        buildModeSuffix = " [DEVELOPMENT]";
-    #endif
-    
-    window = SDL_CreateWindow(("Blackbox" + buildModeSuffix).c_str(), windowExtent.x, windowExtent.y, windowFlags);
-    SDL_Surface* iconSurface = SDL_LoadBMP("Content/Icon64x64.bmp");
-    SDL_SetWindowIcon(window, iconSurface);
-    SDL_DestroySurface(iconSurface);
+    window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
 }
 
 void blackbox::Engine::Run()
@@ -77,6 +64,4 @@ void blackbox::Engine::Run()
 void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
-
-    SDL_DestroyWindow(window);
 }
