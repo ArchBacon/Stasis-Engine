@@ -5,9 +5,9 @@
 #include <SDL3/SDL_vulkan.h>
 #include "Blackbox.hpp"
 
-Blackbox::Engine gEngine;
+blackbox::Engine Engine;
 
-void Blackbox::Engine::Initialize()
+void blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
@@ -15,15 +15,13 @@ void Blackbox::Engine::Initialize()
 
     constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
     window = SDL_CreateWindow("Blackbox", windowExtent.x, windowExtent.y, windowFlags);
-
-    isInitialized = true;
+    SDL_Surface* iconSurface = SDL_LoadBMP("Content/Icon64x64.bmp");
+    SDL_SetWindowIcon(window, iconSurface);
+    SDL_DestroySurface(iconSurface);
 }
 
-void Blackbox::Engine::Run()
+void blackbox::Engine::Run()
 {
-    // Do not run engine if not successfully initialized
-    if (!isInitialized) return;
-
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
@@ -35,9 +33,7 @@ void Blackbox::Engine::Run()
         const float frameTime = elapsed / 1000.0f; // time in milliseconds
         previousTime = currentTime;
 
-        // LogEngine->Trace("FPS: {:.1f} ({}ms)", 1000.0f / FrameTime, FrameTime);
-
-        // Handle events in queue
+        // Handle events in a queue
         while (SDL_PollEvent(&event))
         {
             // Close the window when the user ALT-F4s or closes the window
@@ -69,12 +65,9 @@ void Blackbox::Engine::Run()
     }
 }
 
-void Blackbox::Engine::Shutdown()
+void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
 
-    if (isInitialized)
-    {
-        SDL_DestroyWindow(window);
-    }
+    SDL_DestroyWindow(window);
 }

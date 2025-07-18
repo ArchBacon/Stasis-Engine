@@ -45,15 +45,7 @@ project "Engine"
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
         "$(VULKAN_SDK)/include/",
-        "%{prj.name}/ThirdParty/glm/include",
-        "%{prj.name}/ThirdParty/imgui/include",
-        "%{prj.name}/ThirdParty/SDL/include",
-        "%{prj.name}/ThirdParty/spdlog/include",
-        "%{prj.name}/ThirdParty/simdjson/include",
-        "%{prj.name}/ThirdParty/fastgltf/include",
-        "%{prj.name}/ThirdParty/vkbootstrap",
-        "%{prj.name}/ThirdParty/vma",
-        "%{prj.name}/ThirdParty/stb",
+        "%{prj.name}/ThirdParty/*/include",
     }
 
     libdirs {
@@ -76,14 +68,10 @@ project "Engine"
         "vkbootstrap",
     }
 
-    prebuildcommands {
-        -- Compile shader files before build starts
-        "%{wks.location}Engine/Shaders/compile_shaders.bat"
-    }
-
     postbuildcommands {
-        -- Copy SDL3.dll to engine executable location
-        "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}"
+        "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}",
+        "{COPY} %{wks.location}Engine/Shaders/*.spv %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Shaders",
+        "{COPY} %{wks.location}Engine/Content/** %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Content",
     }
 
     filter "configurations:Debug"

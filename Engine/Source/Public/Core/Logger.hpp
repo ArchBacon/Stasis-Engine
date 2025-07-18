@@ -3,24 +3,21 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-namespace Blackbox
+namespace blackbox
 {
 /**
  * Logger class for outputting color-coded messages to the console using spdlog.
  *
  * Usage:
- *   DECLARE_LOG_CATEGORY(LogName);  // In header
- *   DEFINE_LOG_CATEGORY(LogName);   // In source
+ *   inline auto LogName = std::make_unique<blackbox::Logger>("LogName");
  *   LogName->Info("Value: {}", x);  // Logging call
+ *   LogName [13:31:58] Value: 10  // Example output
  *
  * Log levels:
  * - Trace: Grey   — for detailed tracing (e.g., function calls or step-by-step flow).
  * - Info:  Green  — for general informative messages.
  * - Warn:  Yellow — for warnings that aren't fatal but might require attention.
  * - Error: Red    — for serious issues that require immediate attention.
- *
- * Each logger is tied to a named category shown in the console. Use the DECLARE/DEFINE macros
- * to create named loggers per system or module.
  */
 class Logger
 {

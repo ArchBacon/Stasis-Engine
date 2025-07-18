@@ -1,10 +1,10 @@
 ﻿#include "Core/Engine.hpp"
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv*/[])
 {
-    gEngine.Initialize();
-    gEngine.Run();
-    gEngine.Shutdown();
+    Engine.Initialize();
+    Engine.Run();
+    Engine.Shutdown();
 
     return 0;
 }

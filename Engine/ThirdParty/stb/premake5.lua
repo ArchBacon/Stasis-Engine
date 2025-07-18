@@ -3,15 +3,15 @@ project "stb"
     language "C++"
     staticruntime "on"
 
-    targetdir ("%{wks.location}Binaries/" .. outputdir .. "/Engine")
-    objdir ("%{wks.location}Intermediate/" .. outputdir .. "/Engine")
+    targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/Engine")
+    objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/Engine")
 
     files {
-        "stb_image.h",
+        "include/stb/stb_image.h",
     }
 
     includedirs {
-        ".",
+        "include",
     }
 
     filter "system:windows"
