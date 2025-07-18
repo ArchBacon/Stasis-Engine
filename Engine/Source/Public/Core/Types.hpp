@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace Blackbox
+namespace blackbox
 {
     // integers
     using int2 = glm::ivec2;
