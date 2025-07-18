@@ -14,7 +14,16 @@ void blackbox::Engine::Initialize()
     SDL_Init(SDL_INIT_VIDEO);
 
     constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
-    window = SDL_CreateWindow("Blackbox", windowExtent.x, windowExtent.y, windowFlags);
+
+    // TODO: make into util
+    std::string buildModeSuffix {};
+    #ifdef DEBUG
+        buildModeSuffix = " [DEBUG]";
+    #elif defined DEVELOPMENT
+        buildModeSuffix = " [DEVELOPMENT]";
+    #endif
+    
+    window = SDL_CreateWindow(("Blackbox" + buildModeSuffix).c_str(), windowExtent.x, windowExtent.y, windowFlags);
     SDL_Surface* iconSurface = SDL_LoadBMP("Content/Icon64x64.bmp");
     SDL_SetWindowIcon(window, iconSurface);
     SDL_DestroySurface(iconSurface);
