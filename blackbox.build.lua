@@ -32,13 +32,12 @@ project "Engine"
 
     files {
         "%{prj.name}/Content/**",
-        "%{prj.name}/Shaders/**",
         "%{prj.name}/Source/**",
     }
 
     removefiles {
-        "%{prj.name}/Shaders/**.bat",
-        "%{prj.name}/Shaders/**.spv",
+        "%{prj.name}/Content/**.bat",
+        "%{prj.name}/Content/**.spv",
     }
 
     includedirs {
