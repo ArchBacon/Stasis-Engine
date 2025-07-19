@@ -18,9 +18,9 @@ namespace blackbox
         Window(uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});
         ~Window();
 
-        Window(const Window& window) = delete;
+        Window(const Window& other) = delete;
         Window &operator=(const Window&) = delete;
-        Window(Window&& window) = delete;
+        Window(Window&& other) = delete;
         Window& operator=(Window&& other) = delete;
 
         [[nodiscard]] uint32_t GetWidth() const;
