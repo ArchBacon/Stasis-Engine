@@ -5,7 +5,7 @@
 #include <SDL3/SDL_events.h>
 
 #include "Blackbox.hpp"
-#include "Core/Window.h"
+#include "Core/Window.hpp"
 
 blackbox::Engine Engine;
 

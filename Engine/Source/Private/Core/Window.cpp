@@ -1,4 +1,4 @@
-﻿#include "Core/Window.h"
+﻿#include "Core/Window.hpp"
 
 blackbox::Window::Window(
     const uint32_t width,
