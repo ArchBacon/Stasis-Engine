@@ -15,6 +15,7 @@ group "Dependencies"
     include "Engine/ThirdParty/fastgltf"
     include "Engine/ThirdParty/stb"
     include "Engine/ThirdParty/SDL"
+    include "Engine/ThirdParty/GLAD"
 group ""
 
 project "Engine"
@@ -45,8 +46,9 @@ project "Engine"
     }
 
     links {
-        -- linked libraries
+        -- Libraries
         "SDL3.lib",
+        "opengl32.lib",
         -- Dependencies
         "spdlog",
         "GLM",
@@ -54,6 +56,7 @@ project "Engine"
         "simdjson",
         "fastgltf",
         "stb",
+        "GLAD",
     }
 
     postbuildcommands {
