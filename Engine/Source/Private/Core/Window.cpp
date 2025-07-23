@@ -1,6 +1,7 @@
 ﻿#include "Core/Window.hpp"
 
 #include "Blackbox.hpp"
+#include "glad/glad.h"
 
 blackbox::Window::Window(
     const uint32_t width,
@@ -9,8 +10,13 @@ blackbox::Window::Window(
     const std::string& icon
 ) {
     SDL_Init(SDL_INIT_VIDEO);
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     
-    constexpr SDL_WindowFlags windowFlags = 0;
+    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     
     window = SDL_CreateWindow(
         (name + GetBuildModeSuffix()).c_str(),
@@ -25,6 +31,23 @@ blackbox::Window::Window(
         SDL_SetWindowIcon(window, iconSurface);
         SDL_DestroySurface(iconSurface);
     }
+
+    if (SDL_GL_CreateContext(window) == nullptr)
+    {
+        LogEngine->Error("Failed to create openGL context. {}", SDL_GetError());
+    }
+
+    // Initialize GLAD
+    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
+    {
+        LogEngine->Error("Failed to initialize GLAD");
+        return;
+    }
+
+    LogEngine->Info("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+    LogEngine->Info("OpenGL Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
+
+    glViewport(0, 0, (int32_t)GetWidth(), (int32_t)GetHeight());
 }
 
 blackbox::Window::~Window()
@@ -54,6 +77,28 @@ blackbox::uint2 blackbox::Window::GetSize() const
     SDL_GetWindowSize(window, &size.x, &size.y);
 
     return size;
+}
+
+void blackbox::Window::Render()
+{
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    SwapBuffers();
+}
+
+void blackbox::Window::SwapBuffers() const
+{
+    SDL_GL_SwapWindow(window);
+}
+
+void blackbox::Window::EnableVSync(const bool enabled) const
+{
+    SDL_GL_SetSwapInterval(enabled);
+}
+
+void blackbox::Window::OnWindowResized(const uint32_t width, const uint32_t height) const
+{
+    glViewport(0, 0, (int32_t)width, (int32_t)height);
 }
 
 std::string blackbox::Window::GetBuildModeSuffix() const

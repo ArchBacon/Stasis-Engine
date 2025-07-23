@@ -47,6 +47,12 @@ void blackbox::Engine::Run()
             {
                 stopRendering = false;
             }
+
+            // Re-set viewport size on window resized
+            if (event.type == SDL_EVENT_WINDOW_RESIZED)
+            {
+                window->OnWindowResized(event.window.data1, event.window.data2);
+            }
         }
 
         // Do not draw if we are minimized
@@ -57,6 +63,7 @@ void blackbox::Engine::Run()
             continue;
         }
 
+        window->Render();
         frameNumber++;
     }
 }
@@ -64,4 +71,6 @@ void blackbox::Engine::Run()
 void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
+
+    SDL_Quit();
 }

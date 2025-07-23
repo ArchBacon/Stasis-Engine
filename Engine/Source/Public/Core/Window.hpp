@@ -26,6 +26,14 @@ namespace blackbox
         [[nodiscard]] uint32_t GetWidth() const;
         [[nodiscard]] uint32_t GetHeight() const;
         [[nodiscard]] uint2 GetSize() const;
+
+        // TODO: move to renderer class, this is here for testing
+        void Render();
+        
+        void SwapBuffers() const;
+        void EnableVSync(bool enabled = true) const;
+        
+        void OnWindowResized(uint32_t width, uint32_t height) const;
         
     private:
         [[nodiscard]] std::string GetBuildModeSuffix() const;
