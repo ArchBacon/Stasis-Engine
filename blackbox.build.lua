@@ -14,8 +14,6 @@ group "Dependencies"
     include "Engine/ThirdParty/simdjson"
     include "Engine/ThirdParty/fastgltf"
     include "Engine/ThirdParty/stb"
-    include "Engine/ThirdParty/vma"
-    include "Engine/ThirdParty/vkbootstrap"
     include "Engine/ThirdParty/SDL"
 group ""
 
@@ -36,26 +34,18 @@ project "Engine"
         "%{prj.name}/Source/**",
     }
 
-    removefiles {
-        "%{prj.name}/Shaders/**.bat",
-        "%{prj.name}/Shaders/**.spv",
-    }
-
     includedirs {
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
-        "$(VULKAN_SDK)/include/",
         "%{prj.name}/ThirdParty/*/include",
     }
 
     libdirs {
-        "$(VULKAN_SDK)/Lib/",
         "%{prj.name}/ThirdParty/SDL/lib",
     }
 
     links {
         -- linked libraries
-        "vulkan-1",
         "SDL3.lib",
         -- Dependencies
         "spdlog",
@@ -64,13 +54,10 @@ project "Engine"
         "simdjson",
         "fastgltf",
         "stb",
-        "vma",
-        "vkbootstrap",
     }
 
     postbuildcommands {
         "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}",
-        "{COPY} %{wks.location}Engine/Shaders/*.spv %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Shaders",
         "{COPY} %{wks.location}Engine/Content/** %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Content",
     }
 

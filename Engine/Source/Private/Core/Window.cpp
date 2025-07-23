@@ -10,7 +10,7 @@ blackbox::Window::Window(
 ) {
     SDL_Init(SDL_INIT_VIDEO);
     
-    constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_VULKAN;
+    constexpr SDL_WindowFlags windowFlags = 0;
     
     window = SDL_CreateWindow(
         (name + GetBuildModeSuffix()).c_str(),
