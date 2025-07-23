@@ -79,13 +79,6 @@ blackbox::uint2 blackbox::Window::GetSize() const
     return size;
 }
 
-void blackbox::Window::Render()
-{
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    SwapBuffers();
-}
-
 void blackbox::Window::SwapBuffers() const
 {
     SDL_GL_SwapWindow(window);

@@ -27,9 +27,6 @@ namespace blackbox
         [[nodiscard]] uint32_t GetHeight() const;
         [[nodiscard]] uint2 GetSize() const;
 
-        // TODO: move to renderer class, this is here for testing
-        void Render();
-        
         void SwapBuffers() const;
         void EnableVSync(bool enabled = true) const;
         
