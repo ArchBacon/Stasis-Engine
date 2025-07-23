@@ -25,7 +25,7 @@ void blackbox::Engine::Run()
     {
         const auto currentTime = std::chrono::high_resolution_clock::now();
         const float elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(currentTime - previousTime).count());
-        const float deltaTime = elapsed / 1000000.0f; // time in seconds
+        deltaTime = elapsed / 1000000.0f; // time in seconds
         const float frameTime = elapsed / 1000.0f; // time in milliseconds
         previousTime = currentTime;
 

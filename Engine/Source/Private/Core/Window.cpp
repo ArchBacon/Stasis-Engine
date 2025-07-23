@@ -1,5 +1,7 @@
 ﻿#include "Core/Window.hpp"
 
+#include "Blackbox.hpp"
+
 blackbox::Window::Window(
     const uint32_t width,
     const uint32_t height,
