@@ -12,7 +12,7 @@ namespace blackbox
 {
     class Window
     {
-        SDL_Window* window { nullptr};
+        SDL_Window* window {nullptr};
         
     public:
         Window(uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});

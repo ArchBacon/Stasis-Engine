@@ -66,6 +66,8 @@ void blackbox::Engine::Run()
         }
 
         renderer->Render();
+        window->SwapBuffers();
+        
         frameNumber++;
     }
 }

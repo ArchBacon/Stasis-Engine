@@ -33,6 +33,7 @@ namespace blackbox
         [[nodiscard]] graphics::GlRenderer& Renderer() const { return *renderer; }
         
         [[nodiscard]] float DeltaTime() const { return deltaTime; }
+        [[nodiscard]] uint32_t FrameNumber() const { return frameNumber; }
     };
 }
 

@@ -48,6 +48,8 @@ blackbox::Window::Window(
     LogEngine->Info("OpenGL Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
     glViewport(0, 0, (int32_t)GetWidth(), (int32_t)GetHeight());
+
+    EnableVSync(true);
 }
 
 blackbox::Window::~Window()
