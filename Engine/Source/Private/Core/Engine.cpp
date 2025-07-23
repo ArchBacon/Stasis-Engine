@@ -34,8 +34,16 @@ void blackbox::Engine::Run()
         // Handle events in a queue
         while (SDL_PollEvent(&event))
         {
+            // TODO: handle these events in an event bus or something, so that I don't have a gigantic list of events for everything here.
+            
             // Close the window when the user ALT-F4s or closes the window
             if (event.type == SDL_EVENT_QUIT)
+            {
+                isRunning = false;
+            }
+
+            // Close on ESC key press
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
             {
                 isRunning = false;
             }
