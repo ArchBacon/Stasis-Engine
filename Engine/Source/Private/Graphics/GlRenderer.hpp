@@ -4,6 +4,13 @@ namespace blackbox::graphics
 {
     class GlRenderer
     {
+        unsigned vertexShader {};
+        unsigned fragmentShader {};
+        unsigned shaderProgram {};
+        // ReSharper disable CppInconsistentNaming
+        unsigned VBO {}, VAO {};
+        // ReSharper enable CppInconsistentNaming
+        
     public:
         GlRenderer();
         ~GlRenderer();
