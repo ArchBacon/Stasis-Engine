@@ -1,5 +1,8 @@
 ﻿#include "GlRenderer.hpp"
 
+#include <SDL3/SDL_time.h>
+#include <SDL3/SDL_timer.h>
+
 #include "Blackbox.hpp"
 #include "Core/Engine.hpp"
 #include "Core/FileIO.hpp"
@@ -111,7 +114,13 @@ namespace blackbox::graphics
         // Wireframe mode
         // glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // GL_FILL for default
         
+        float timeValue = ::Engine.Uptime();
+        float greenValue = (sin(timeValue) / 2.0f) + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "vertexColor");
+
         glUseProgram(shaderProgram);
+        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }

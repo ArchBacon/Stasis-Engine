@@ -30,6 +30,7 @@ void blackbox::Engine::Run()
         const auto currentTime = std::chrono::high_resolution_clock::now();
         const float elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(currentTime - previousTime).count());
         deltaTime = elapsed / 1000000.0f; // time in seconds
+        uptime += deltaTime;
         const float frameTime = elapsed / 1000.0f; // time in milliseconds
         previousTime = currentTime;
 
@@ -85,6 +86,7 @@ void blackbox::Engine::Run()
 void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
+    LogEngine->Info("Engine uptime: {}s", Uptime());
 
     SDL_Quit();
 }

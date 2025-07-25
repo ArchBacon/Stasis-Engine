@@ -25,6 +25,7 @@ namespace blackbox
         uint32_t frameNumber {0};
 
         float deltaTime {0.0f};
+        float uptime {0.0f};
         
     public:
         void Initialize();
@@ -36,6 +37,8 @@ namespace blackbox
         [[nodiscard]] FileIO& FileIO() const { return *fileIO; }
         
         [[nodiscard]] float DeltaTime() const { return deltaTime; }
+        // How long the engine has een running in seconds
+        [[nodiscard]] float Uptime() const { return uptime; } 
         [[nodiscard]] uint32_t FrameNumber() const { return frameNumber; }
     };
 }
