@@ -7,7 +7,7 @@ namespace blackbox::graphics
         unsigned vertexShader {};
         unsigned fragmentShader {};
         unsigned shaderProgram {};
-        unsigned VBO {}, VAO {};
+        unsigned VBO {}, VAO {}, EBO {};
         
     public:
         GlRenderer();
