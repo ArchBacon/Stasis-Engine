@@ -12,11 +12,13 @@ namespace blackbox::graphics
 namespace blackbox
 {
     class Window;
+    class FileIO;
     
     class Engine
     {
         std::unique_ptr<Window> window {nullptr};
         std::unique_ptr<graphics::GlRenderer> renderer {nullptr};
+        std::unique_ptr<FileIO> fileIO {nullptr};
         
         bool stopRendering {false};
         bool isRunning {true};
@@ -31,6 +33,7 @@ namespace blackbox
 
         [[nodiscard]] Window& Window() const { return *window; }
         [[nodiscard]] graphics::GlRenderer& Renderer() const { return *renderer; }
+        [[nodiscard]] FileIO& FileIO() const { return *fileIO; }
         
         [[nodiscard]] float DeltaTime() const { return deltaTime; }
         [[nodiscard]] uint32_t FrameNumber() const { return frameNumber; }

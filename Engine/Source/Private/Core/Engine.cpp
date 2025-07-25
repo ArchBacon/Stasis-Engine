@@ -5,6 +5,7 @@
 #include <SDL3/SDL_events.h>
 
 #include "Blackbox.hpp"
+#include "Core/FileIO.hpp"
 #include "Core/Window.hpp"
 #include "Graphics/GlRenderer.hpp"
 
@@ -15,7 +16,8 @@ void blackbox::Engine::Initialize()
     LogEngine->Trace("Initializing Engine...");
 
     window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
-    renderer = std::make_unique<graphics::GlRenderer>();
+    renderer = std::make_unique<blackbox::graphics::GlRenderer>();
+    fileIO = std::make_unique<blackbox::FileIO>();
 }
 
 void blackbox::Engine::Run()
