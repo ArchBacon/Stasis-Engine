@@ -7,9 +7,7 @@ namespace blackbox::graphics
         unsigned vertexShader {};
         unsigned fragmentShader {};
         unsigned shaderProgram {};
-        // ReSharper disable CppInconsistentNaming
         unsigned VBO {}, VAO {};
-        // ReSharper enable CppInconsistentNaming
         
     public:
         GlRenderer();
