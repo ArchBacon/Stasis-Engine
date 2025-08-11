@@ -15,6 +15,8 @@ void blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
+    SDL_Init(SDL_INIT_VIDEO);
+    
     window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
     renderer = std::make_unique<blackbox::graphics::GlRenderer>();
     fileIO = std::make_unique<blackbox::FileIO>();

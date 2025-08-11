@@ -15,6 +15,6 @@ namespace blackbox
         FileIO(FileIO&& other) = delete;
         FileIO& operator=(FileIO&& other) = delete;
 
-        std::string ReadFile(const std::string& filepath);
+        std::string ReadFile(const std::string& filepath) const;
     };
 }

@@ -9,7 +9,7 @@ namespace blackbox
     FileIO::FileIO() = default;
     FileIO::~FileIO() = default;
 
-    std::string FileIO::ReadFile(const std::string& filepath)
+    std::string FileIO::ReadFile(const std::string& filepath) const
     {
         std::ifstream file(filepath, std::ios::ate | std::ios::binary);
 

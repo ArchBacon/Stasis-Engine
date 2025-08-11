@@ -1,65 +1,14 @@
 ﻿#include "GlRenderer.hpp"
 
-#include <SDL3/SDL_time.h>
-#include <SDL3/SDL_timer.h>
-
 #include "Blackbox.hpp"
-#include "Core/Engine.hpp"
-#include "Core/FileIO.hpp"
+#include "GlShader.hpp"
 #include "glad/glad.h"
 
 namespace blackbox::graphics
 {
     GlRenderer::GlRenderer()
     {
-        int success {};
-        char infoLog[512];
-
-        const std::string vertexShaderContents = ::Engine.FileIO().ReadFile("Shaders/basic.vert");
-        const char* vertexShaderSource = vertexShaderContents.c_str();
-        
-        const std::string fragmentShaderContents = ::Engine.FileIO().ReadFile("Shaders/basic.frag");
-        const char* fragmentShaderSource = fragmentShaderContents.c_str();
-
-        // Create vertex shader
-        vertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-        glCompileShader(vertexShader);
-        
-        glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
-            LogEngine->Error("ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}", infoLog);
-        }
-
-        // Create fragment shader
-        fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-        glCompileShader(fragmentShader);
-
-        glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-        if (!success)
-        {
-            glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
-            LogEngine->Error("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n{}", infoLog);
-        }
-
-        // Create shader program
-        shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
-        glLinkProgram(shaderProgram);
-
-        glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-        if (!success)
-        {
-            glGetProgramInfoLog(shaderProgram, 512, nullptr, infoLog);
-            LogEngine->Error("ERROR::SHADER::PROGRAM::LINKING_FAILED\n{}", infoLog);
-        }
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
+        shader = GlShader{"Shaders/basic.vert", "Shaders/basic.frag"};
 
         // Create Triangle & Co.
         float vertices[]
@@ -105,7 +54,6 @@ namespace blackbox::graphics
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
-        glDeleteProgram(shaderProgram);
     };
 
     void GlRenderer::Render()
@@ -116,7 +64,7 @@ namespace blackbox::graphics
         // Wireframe mode
         // glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // GL_FILL for default
         
-        glUseProgram(shaderProgram);
+        shader.Use();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     }

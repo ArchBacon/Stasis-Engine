@@ -1,12 +1,11 @@
 ﻿#pragma once
+#include "GlShader.hpp"
 
 namespace blackbox::graphics
 {
     class GlRenderer
     {
-        unsigned vertexShader {};
-        unsigned fragmentShader {};
-        unsigned shaderProgram {};
+        GlShader shader {};
         unsigned VBO {}, VAO {}, EBO {};
         
     public:
