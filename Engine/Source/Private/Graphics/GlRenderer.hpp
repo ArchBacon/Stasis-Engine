@@ -7,6 +7,7 @@ namespace blackbox::graphics
     {
         GlShader shader {};
         unsigned VBO {}, VAO {}, EBO {};
+        unsigned texture {};
         
     public:
         GlRenderer();

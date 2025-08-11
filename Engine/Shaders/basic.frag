@@ -3,8 +3,11 @@
 out vec4 outColor;
 
 in vec3 vertexColor;
+in vec2 texCoord;
+
+uniform sampler2D inTexture;
 
 void main()
 {
-    outColor = vec4(vertexColor, 1.0);
+    outColor = texture(inTexture, texCoord);
 }
