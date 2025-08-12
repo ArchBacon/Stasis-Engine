@@ -30,12 +30,6 @@ namespace blackbox::graphics
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
         // Create, bind, and pass data to Vertex Buffer Object
         glGenVertexArrays(1, &VAO);
@@ -64,15 +58,34 @@ namespace blackbox::graphics
         glBindBuffer(GL_ARRAY_BUFFER, 0); // Unbind VBO
         glBindVertexArray(0);
 
-        // Create texture
+        // Create textures
         int width, height, channels;
-        unsigned char* data = stbi_load("Content/ContainerWood.png", &width, &height, &channels, 4);
-        
+        stbi_set_flip_vertically_on_load(true);
+
+        // Texture #1
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        unsigned char* data = stbi_load("Content/ContainerWood.png", &width, &height, &channels, 4);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
 
+        // Texture #1
+        glGenTextures(1, &texture2);
+        glBindTexture(GL_TEXTURE_2D, texture2);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        data = stbi_load("Content/awesomeface.png", &width, &height, &channels, 4);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(data);
     }
     
@@ -89,10 +102,16 @@ namespace blackbox::graphics
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Wireframe mode
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // GL_FILL for default
+        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // GL_FILL for default
         
         shader.Use();
+        shader.SetInt("texture1", 0);
+        shader.SetInt("texture2", 1);
+        
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }

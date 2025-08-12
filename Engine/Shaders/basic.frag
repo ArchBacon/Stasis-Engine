@@ -5,9 +5,10 @@ out vec4 outColor;
 in vec3 vertexColor;
 in vec2 texCoord;
 
-uniform sampler2D inTexture;
+uniform sampler2D texture1;
+uniform sampler2D texture2;
 
 void main()
 {
-    outColor = texture(inTexture, texCoord);
+    outColor = mix(texture(texture1, texCoord), texture(texture2, texCoord), 0.2);
 }
