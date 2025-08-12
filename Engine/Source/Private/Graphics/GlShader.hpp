@@ -8,7 +8,6 @@ namespace blackbox::graphics
 {
     class GlShader
     {
-    public: // TODO: Make not public
         unsigned shaderProgram {0};
         
     public:

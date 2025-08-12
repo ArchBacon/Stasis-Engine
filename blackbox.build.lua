@@ -59,6 +59,10 @@ project "Engine"
         "GLAD",
     }
 
+    defines {
+        "GLM_ENABLE_EXPERIMENTAL",
+    }
+
     postbuildcommands {
         "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}",
         "{COPY} %{wks.location}Engine/Content/** %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Content",

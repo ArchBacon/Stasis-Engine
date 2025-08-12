@@ -1,14 +1,13 @@
 ﻿#include "GlRenderer.hpp"
 
+#include <glad/glad.h>
+#include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
 #include "Blackbox.hpp"
 #include "GlShader.hpp"
-#include "glad/glad.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "Core/Engine.hpp"
 #include "Core/Window.hpp"
 
@@ -142,6 +141,19 @@ namespace blackbox::graphics
 
     void GlRenderer::Render()
     {
+        glm::vec3 cubePositions[] = {
+            glm::vec3( 0.0f,  0.0f,  0.0f), 
+            glm::vec3( 2.0f,  5.0f, -15.0f), 
+            glm::vec3(-1.5f, -2.2f, -2.5f),  
+            glm::vec3(-3.8f, -2.0f, -12.3f),  
+            glm::vec3( 2.4f, -0.4f, -3.5f),  
+            glm::vec3(-1.7f,  3.0f, -7.5f),  
+            glm::vec3( 1.3f, -2.0f, -2.5f),  
+            glm::vec3( 1.5f,  2.0f, -2.5f), 
+            glm::vec3( 1.5f,  0.2f, -1.5f), 
+            glm::vec3(-1.3f,  1.0f, -1.5f)  
+        };
+        
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -151,8 +163,7 @@ namespace blackbox::graphics
         
         shader.Use();
         shader.SetMat4("model", model);
-        unsigned int viewLoc  = glGetUniformLocation(shader.shaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+        shader.SetMat4("view", view);
         shader.SetMat4("projection", projection);
         
         glActiveTexture(GL_TEXTURE0);
@@ -161,7 +172,16 @@ namespace blackbox::graphics
         glBindTexture(GL_TEXTURE_2D, texture2);
         
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for(unsigned int i = 0; i < 10; i++)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cubePositions[i]);
+            float angle = 20.0f * i; 
+            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+            shader.SetMat4("model", model);
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
         // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
