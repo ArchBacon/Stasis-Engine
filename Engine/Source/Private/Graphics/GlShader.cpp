@@ -84,4 +84,9 @@ namespace blackbox::graphics
     {
         glUniform3f(glGetUniformLocation(shaderProgram, name.c_str()), value.x, value.y, value.z);
     }
+
+    void GlShader::SetMat4(const std::string& name, glm::mat4 value) const
+    {
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, name.c_str()), 1, GL_FALSE, glm::value_ptr(value));
+    }
 }
