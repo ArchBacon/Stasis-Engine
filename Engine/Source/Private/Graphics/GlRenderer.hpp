@@ -3,6 +3,12 @@
 
 namespace blackbox::graphics
 {
+    enum class RenderMode
+    {
+        Default,
+        Wireframe,
+    };
+    
     class GlRenderer
     {
         GlShader shader {};
@@ -19,5 +25,7 @@ namespace blackbox::graphics
         GlRenderer& operator=(GlRenderer&& other) = delete;
 
         void Render();
+
+        void SetRenderMode(RenderMode mode) const;
     };
 }

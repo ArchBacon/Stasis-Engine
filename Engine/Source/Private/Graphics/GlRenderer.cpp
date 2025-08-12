@@ -145,9 +145,6 @@ namespace blackbox::graphics
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Wireframe mode
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // GL_FILL for default
-        
         auto model = glm::rotate(glm::mat4(1.0f), ::Engine.Uptime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         auto view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
         auto projection = glm::perspective(glm::radians(45.0f), (float)::Engine.Window().GetWidth() / (float)::Engine.Window().GetHeight(), 0.1f, 100.0f);
@@ -166,5 +163,20 @@ namespace blackbox::graphics
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+
+    void GlRenderer::SetRenderMode(const RenderMode mode) const
+    {
+        switch (mode)
+        {
+        case RenderMode::Default:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            break;
+        case RenderMode::Wireframe:
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            break;
+        default:
+            LogRenderer->Warn("Render mode `{}` not implemented.", static_cast<int>(mode));
+        }
     }
 }
