@@ -45,7 +45,7 @@ blackbox::Window::Window(
     LogEngine->Info("OpenGL Version: {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
     LogEngine->Info("OpenGL Renderer: {}", reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
-    glViewport(0, 0, (int32_t)GetWidth(), (int32_t)GetHeight());
+    glViewport(0, 0, Width(), Height());
 
     EnableVSync(true);
 }
@@ -55,28 +55,9 @@ blackbox::Window::~Window()
     SDL_DestroyWindow(window);
 }
 
-uint32_t blackbox::Window::GetWidth() const
+float blackbox::Window::Aspect() const
 {
-    int32_t width {};
-    SDL_GetWindowSize(window, &width, nullptr);
-
-    return width;
-}
-
-uint32_t blackbox::Window::GetHeight() const
-{
-    int32_t height {};
-    SDL_GetWindowSize(window, nullptr, &height);
-
-    return height;
-}
-
-blackbox::uint2 blackbox::Window::GetSize() const
-{
-    int2 size {};
-    SDL_GetWindowSize(window, &size.x, &size.y);
-
-    return size;
+    return Width<float>() / Height<float>();
 }
 
 void blackbox::Window::SwapBuffers() const
@@ -91,7 +72,7 @@ void blackbox::Window::EnableVSync(const bool enabled) const
 
 void blackbox::Window::OnWindowResized(const uint32_t width, const uint32_t height) const
 {
-    glViewport(0, 0, (int32_t)width, (int32_t)height);
+    glViewport(0, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
 }
 
 std::string blackbox::Window::GetBuildModeSuffix() const

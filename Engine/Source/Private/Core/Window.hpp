@@ -12,6 +12,7 @@ namespace blackbox
 {
     class Window
     {
+    public: // TODO: Make non-public
         SDL_Window* window {nullptr};
         
     public:
@@ -23,9 +24,11 @@ namespace blackbox
         Window(Window&& other) = delete;
         Window& operator=(Window&& other) = delete;
 
-        [[nodiscard]] uint32_t GetWidth() const;
-        [[nodiscard]] uint32_t GetHeight() const;
-        [[nodiscard]] uint2 GetSize() const;
+        template <Numeric T = int>
+        [[nodiscard]] T Width() const;
+        template <Numeric T = int>
+        [[nodiscard]] T Height() const;
+        [[nodiscard]] float Aspect() const;
 
         void SwapBuffers() const;
         void EnableVSync(bool enabled = true) const;
@@ -35,4 +38,22 @@ namespace blackbox
     private:
         [[nodiscard]] std::string GetBuildModeSuffix() const;
     };
+    
+    template <Numeric T>
+    T Window::Width() const
+    {
+        int32_t width {};
+        SDL_GetWindowSize(window, &width, nullptr);
+
+        return static_cast<T>(width);
+    }
+
+    template <Numeric T>
+    T Window::Height() const
+    {
+        int32_t height {};
+        SDL_GetWindowSize(window, nullptr, &height);
+
+        return static_cast<T>(height);
+    }
 }

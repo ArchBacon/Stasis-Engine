@@ -1,4 +1,6 @@
 ﻿#pragma once
+
+#include "Camera.hpp"
 #include "GlShader.hpp"
 
 namespace blackbox::graphics
@@ -14,6 +16,7 @@ namespace blackbox::graphics
         GlShader shader {};
         unsigned VBO {}, VAO {}, EBO {};
         unsigned texture {}, texture2 {};
+        Camera camera {};
         
     public:
         GlRenderer();
