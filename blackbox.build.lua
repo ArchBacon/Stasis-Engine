@@ -8,14 +8,14 @@ workspace "Blackbox"
     outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
-    include "Engine/ThirdParty/spdlog"
-    include "Engine/ThirdParty/GLM"
-    include "Engine/ThirdParty/ImGui"
-    include "Engine/ThirdParty/simdjson"
     include "Engine/ThirdParty/fastgltf"
-    include "Engine/ThirdParty/stb"
+    include "Engine/ThirdParty/glad"
+    include "Engine/ThirdParty/glm"
+    include "Engine/ThirdParty/imgui"
     include "Engine/ThirdParty/SDL"
-    include "Engine/ThirdParty/GLAD"
+    include "Engine/ThirdParty/simdjson"
+    include "Engine/ThirdParty/spdlog"
+    include "Engine/ThirdParty/stb"
 group ""
 
 project "Engine"
@@ -54,13 +54,13 @@ project "Engine"
         "SDL3.lib",
         "opengl32.lib",
         -- Dependencies
-        "spdlog",
+        "fastgltf",
+        "GLAD",
         "GLM",
         "ImGui",
         "simdjson",
-        "fastgltf",
+        "spdlog",
         "stb",
-        "GLAD",
     }
 
     defines
