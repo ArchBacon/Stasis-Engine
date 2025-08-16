@@ -29,23 +29,27 @@ project "Engine"
     targetdir ("Binaries/" .. outputdir .. "/%{prj.name}")
     objdir ("Intermediate/" .. outputdir .. "/%{prj.name}")
 
-    files {
+    files
+    {
         "%{prj.name}/Content/**",
         "%{prj.name}/Shaders/**",
         "%{prj.name}/Source/**",
     }
 
-    includedirs {
+    includedirs
+    {
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
         "%{prj.name}/ThirdParty/*/include",
     }
 
-    libdirs {
+    libdirs
+    {
         "%{prj.name}/ThirdParty/SDL/lib",
     }
 
-    links {
+    links
+    {
         -- Libraries
         "SDL3.lib",
         "opengl32.lib",
@@ -59,11 +63,14 @@ project "Engine"
         "GLAD",
     }
 
-    defines {
+    defines
+    {
         "GLM_ENABLE_EXPERIMENTAL",
+        "GLM_FORCE_DEPTH_ZERO_TO_ONE",
     }
 
-    postbuildcommands {
+    postbuildcommands
+    {
         "{COPY} %{wks.location}Engine/ThirdParty/SDL/lib/SDL3.dll %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}",
         "{COPY} %{wks.location}Engine/Content/** %{wks.location}Binaries/\"" .. outputdir .. "\"/%{prj.name}/Content",
     }
