@@ -8,6 +8,7 @@ workspace "Blackbox"
     outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 group "Dependencies"
+    include "Engine/ThirdParty/entt"
     include "Engine/ThirdParty/fastgltf"
     include "Engine/ThirdParty/glad"
     include "Engine/ThirdParty/glm"
@@ -54,6 +55,7 @@ project "Engine"
         "SDL3.lib",
         "opengl32.lib",
         -- Dependencies
+        "EnTT",
         "fastgltf",
         "GLAD",
         "GLM",
