@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <concepts>
 
 namespace blackbox
 {
@@ -18,4 +19,8 @@ namespace blackbox
     using float2 = glm::vec2;
     using float3 = glm::vec3;
     using float4 = glm::vec4;
+
+    // Concepts
+    template <typename T>
+    concept Numeric = std::integral<T> || std::floating_point<T>;
 }

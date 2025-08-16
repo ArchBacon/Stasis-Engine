@@ -5,7 +5,10 @@
 #include <SDL3/SDL_events.h>
 
 #include "Blackbox.hpp"
+#include "Core/FileIO.hpp"
 #include "Core/Window.hpp"
+#include "Editor/Editor.hpp"
+#include "Graphics/GlRenderer.hpp"
 
 blackbox::Engine Engine;
 
@@ -13,7 +16,12 @@ void blackbox::Engine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
+    SDL_Init(SDL_INIT_VIDEO);
+    
+    editor = std::make_unique<blackbox::editor::Editor>();
     window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
+    renderer = std::make_unique<blackbox::graphics::GlRenderer>();
+    fileIO = std::make_unique<blackbox::FileIO>();
 }
 
 void blackbox::Engine::Run()
@@ -26,14 +34,23 @@ void blackbox::Engine::Run()
         const auto currentTime = std::chrono::high_resolution_clock::now();
         const float elapsed = static_cast<float>(std::chrono::duration_cast<std::chrono::microseconds>(currentTime - previousTime).count());
         deltaTime = elapsed / 1000000.0f; // time in seconds
+        uptime += deltaTime;
         const float frameTime = elapsed / 1000.0f; // time in milliseconds
         previousTime = currentTime;
 
         // Handle events in a queue
         while (SDL_PollEvent(&event))
         {
+            // TODO: handle these events in an event bus or something, so that I don't have a gigantic list of events for everything here.
+            
             // Close the window when the user ALT-F4s or closes the window
             if (event.type == SDL_EVENT_QUIT)
+            {
+                isRunning = false;
+            }
+
+            // Close on ESC key press
+            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
             {
                 isRunning = false;
             }
@@ -47,6 +64,12 @@ void blackbox::Engine::Run()
             {
                 stopRendering = false;
             }
+
+            // Re-set viewport size on window resized
+            if (event.type == SDL_EVENT_WINDOW_RESIZED)
+            {
+                window->OnWindowResized(event.window.data1, event.window.data2);
+            }
         }
 
         // Do not draw if we are minimized
@@ -57,6 +80,10 @@ void blackbox::Engine::Run()
             continue;
         }
 
+        editor->Tick(deltaTime);
+        renderer->Render();
+        window->SwapBuffers();
+        
         frameNumber++;
     }
 }
@@ -64,4 +91,7 @@ void blackbox::Engine::Run()
 void blackbox::Engine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
+    LogEngine->Info("Engine uptime: {}s", Uptime());
+
+    SDL_Quit();
 }
