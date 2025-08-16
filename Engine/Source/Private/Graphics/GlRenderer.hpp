@@ -16,7 +16,7 @@ namespace blackbox::graphics
         GlShader shader {};
         unsigned VBO {}, VAO {}, EBO {};
         unsigned texture {}, texture2 {};
-        Camera camera {};
+        Camera* camera;
         
     public:
         GlRenderer();

@@ -4,6 +4,11 @@
 
 #include "Core/Types.hpp"
 
+namespace blackbox::editor
+{
+    class Editor;
+}
+
 namespace blackbox::graphics
 {
     class GlRenderer;
@@ -16,6 +21,7 @@ namespace blackbox
     
     class Engine
     {
+        std::unique_ptr<editor::Editor> editor {nullptr};
         std::unique_ptr<Window> window {nullptr};
         std::unique_ptr<graphics::GlRenderer> renderer {nullptr};
         std::unique_ptr<FileIO> fileIO {nullptr};
@@ -32,6 +38,7 @@ namespace blackbox
         void Run();
         void Shutdown();
 
+        [[nodiscard]] editor::Editor& Editor() const { return *editor; }
         [[nodiscard]] Window& Window() const { return *window; }
         [[nodiscard]] graphics::GlRenderer& Renderer() const { return *renderer; }
         [[nodiscard]] FileIO& FileIO() const { return *fileIO; }

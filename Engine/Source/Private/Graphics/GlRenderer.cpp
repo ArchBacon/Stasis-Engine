@@ -11,6 +11,8 @@
 #include "GlShader.hpp"
 #include "Core/Engine.hpp"
 #include "Core/Window.hpp"
+#include "Editor/Editor.hpp"
+#include "Editor/EditorCamera.hpp"
 #include "glm/gtx/quaternion.hpp"
 
 namespace blackbox::graphics
@@ -133,7 +135,7 @@ namespace blackbox::graphics
 
         glEnable(GL_DEPTH_TEST);
 
-        camera.location = {0, 0, 3};
+        camera = &::Engine.Editor().Camera();
     }
 
     GlRenderer::~GlRenderer()
@@ -161,78 +163,14 @@ namespace blackbox::graphics
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        { // KEYBOARD CONTROLS
-            const auto keystate = SDL_GetKeyboardState(nullptr);
-            float x, y;
-            const auto mousestate = SDL_GetMouseState(&x, &y);
-            if (keystate[SDL_SCANCODE_W])
-            {
-                camera.location += camera.speed * ::Engine.DeltaTime() * camera.front;
-            }
-            if (keystate[SDL_SCANCODE_A])
-            {
-                camera.location -= glm::normalize(glm::cross(camera.front, camera.up)) * camera.speed * ::Engine.DeltaTime();
-            }
-            if (keystate[SDL_SCANCODE_S])
-            {
-                camera.location -= camera.speed * ::Engine.DeltaTime() * camera.front;
-            }
-            if (keystate[SDL_SCANCODE_D])
-            {
-                camera.location += glm::normalize(glm::cross(camera.front, camera.up)) * camera.speed * ::Engine.DeltaTime();
-            }
-            if (keystate[SDL_SCANCODE_Q])
-            {
-                camera.location -= camera.speed * ::Engine.DeltaTime() * camera.up;
-            }
-            if (keystate[SDL_SCANCODE_E])
-            {
-                camera.location += camera.speed * ::Engine.DeltaTime() * camera.up;
-            }
+        camera->Update();
 
-            if (mousestate & SDL_BUTTON_RMASK)
-            {
-                SDL_HideCursor();
-                SDL_SetWindowMouseGrab(::Engine.Window().window, true);
-                SDL_WarpMouseInWindow(::Engine.Window().window, ::Engine.Window().Width<float>() / 2, ::Engine.Window().Height<float>() / 2);
-                
-                if (!camera.firstClick)
-                {
-                    const bool invertY = false;
-                    float2 relativeMouseMovement {
-                        (x - ::Engine.Window().Width<float>() / 2) / ::Engine.Window().Width<float>(),
-                        (y - ::Engine.Window().Height<float>() / 2) / ::Engine.Window().Height<float>() * (float)(2 * invertY - 1)
-                    };
-
-                    const float mouseSensitivity = 10000.0f;
-                    float2 mouseMovement = relativeMouseMovement * (mouseSensitivity * ::Engine.DeltaTime());
-
-                    camera.rotation.yaw += mouseMovement.x;
-                    camera.rotation.pitch += mouseMovement.y;
-                    camera.rotation.pitch = glm::clamp(camera.rotation.pitch, -89.f, 89.f);
-                    camera.front = glm::normalize(float3{
-                        cos(glm::radians(camera.rotation.yaw)) * cos(glm::radians(camera.rotation.pitch)),
-                        sin(glm::radians(camera.rotation.pitch)),
-                        sin(glm::radians(camera.rotation.yaw)) * cos(glm::radians(camera.rotation.pitch))
-                    });
-                }
-
-                camera.firstClick = false;
-            }
-            else
-            {
-                SDL_ShowCursor();
-                SDL_SetWindowMouseGrab(::Engine.Window().window, false);
-                camera.firstClick = true;
-            }
-        }
-
-        glm::mat4 view = glm::lookAt(camera.location, camera.location + camera.front, camera.up);
-        auto model = glm::rotate(glm::mat4(1.0f), ::Engine.Uptime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        auto projection = glm::perspective(glm::radians(camera.fov), ::Engine.Window().Width<float>() / ::Engine.Window().Height<float>(), 0.1f, 100.0f);
+        glm::mat4 view = camera->ViewMatrix();
+        // auto model = glm::rotate(glm::mat4(1.0f), ::Engine.Uptime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
+        auto projection = camera->ProjectionMatrix();
 
         shader.Use();
-        shader.SetMat4("model", model);
+        // shader.SetMat4("model", model);
         shader.SetMat4("view", view);
         shader.SetMat4("projection", projection);
 

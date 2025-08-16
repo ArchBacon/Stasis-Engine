@@ -7,6 +7,7 @@
 #include "Blackbox.hpp"
 #include "Core/FileIO.hpp"
 #include "Core/Window.hpp"
+#include "Editor/Editor.hpp"
 #include "Graphics/GlRenderer.hpp"
 
 blackbox::Engine Engine;
@@ -17,6 +18,7 @@ void blackbox::Engine::Initialize()
 
     SDL_Init(SDL_INIT_VIDEO);
     
+    editor = std::make_unique<blackbox::editor::Editor>();
     window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
     renderer = std::make_unique<blackbox::graphics::GlRenderer>();
     fileIO = std::make_unique<blackbox::FileIO>();
@@ -78,6 +80,7 @@ void blackbox::Engine::Run()
             continue;
         }
 
+        editor->Tick(deltaTime);
         renderer->Render();
         window->SwapBuffers();
         
