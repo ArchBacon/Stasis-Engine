@@ -13,13 +13,14 @@ namespace blackbox::graphics
     
     class GlRenderer
     {
-        GlShader shader {};
+        GlShader* shader;
         unsigned VBO {}, VAO {}, EBO {};
         unsigned texture {}, texture2 {};
         Camera* camera;
+        FileIO& fileIO;
         
     public:
-        GlRenderer();
+        GlRenderer(FileIO& fileIO);
         ~GlRenderer();
 
         GlRenderer(const GlRenderer& other) = delete;

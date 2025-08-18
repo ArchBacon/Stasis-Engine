@@ -1,30 +1,15 @@
 ﻿#pragma once
 
 #include <memory>
-
 #include "Core/Types.hpp"
-
-namespace blackbox::editor
-{
-    class Editor;
-}
-
-namespace blackbox::graphics
-{
-    class GlRenderer;
-}
 
 namespace blackbox
 {
-    class Window;
-    class FileIO;
-    
+    class Container;
+
     class Engine
     {
-        std::unique_ptr<editor::Editor> editor {nullptr};
-        std::unique_ptr<Window> window {nullptr};
-        std::unique_ptr<graphics::GlRenderer> renderer {nullptr};
-        std::unique_ptr<FileIO> fileIO {nullptr};
+        std::unique_ptr<blackbox::Container> container {nullptr};
         
         bool stopRendering {false};
         bool isRunning {true};
@@ -38,10 +23,7 @@ namespace blackbox
         void Run();
         void Shutdown();
 
-        [[nodiscard]] editor::Editor& Editor() const { return *editor; }
-        [[nodiscard]] Window& Window() const { return *window; }
-        [[nodiscard]] graphics::GlRenderer& Renderer() const { return *renderer; }
-        [[nodiscard]] FileIO& FileIO() const { return *fileIO; }
+        [[nodiscard]] blackbox::Container& Container() const { return *container; }
         
         [[nodiscard]] float DeltaTime() const { return deltaTime; }
         // How long the engine has een running in seconds

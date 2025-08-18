@@ -1,12 +1,15 @@
 ﻿#include "Camera.hpp"
 
 #include "Core/Engine.hpp"
-#include "Core/Window.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_transform.hpp"
 
 namespace blackbox::graphics
 {
+    Camera::Camera(const float aspectRatio)
+        : aspectRatio{aspectRatio}
+    {}
+
     glm::mat4 Camera::ViewMatrix() const
     {
         return glm::lookAt(location, location + front, up);
@@ -14,7 +17,7 @@ namespace blackbox::graphics
 
     glm::mat4 Camera::ProjectionMatrix() const
     {
-        return glm::perspective(glm::radians(fov), ::Engine.Window().Aspect(), nearPlane, farPlane);
+        return glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
     }
 
     void Camera::Update()
