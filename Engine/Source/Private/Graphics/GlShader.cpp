@@ -8,15 +8,16 @@
 
 namespace blackbox::graphics
 {
-    GlShader::GlShader(const std::string& vertexPath, const std::string& fragmentPath)
+    GlShader::GlShader(FileIO& fileIO, const std::string& vertexPath, const std::string& fragmentPath)
+        : fileIO{fileIO}
     {
         int success {};
         char infoLog[512];
 
-        const std::string vertexShaderContents = ::Engine.FileIO().ReadFile(vertexPath);
+        const std::string vertexShaderContents = fileIO.ReadFile(vertexPath);
         const char* vertexShaderSource = vertexShaderContents.c_str();
         
-        const std::string fragmentShaderContents = ::Engine.FileIO().ReadFile(fragmentPath);
+        const std::string fragmentShaderContents = fileIO.ReadFile(fragmentPath);
         const char* fragmentShaderSource = fragmentShaderContents.c_str();
 
         // Create vertex shader

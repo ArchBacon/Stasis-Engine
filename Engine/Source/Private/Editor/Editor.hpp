@@ -2,6 +2,11 @@
 
 #include <memory>
 
+namespace blackbox
+{
+    class Window;
+}
+
 namespace blackbox::editor
 {
     class EditorCamera;
@@ -9,9 +14,10 @@ namespace blackbox::editor
     class Editor
     {
         std::unique_ptr<EditorCamera> camera {nullptr};
+        Window& window;
         
     public:
-        Editor();
+        Editor(Window& window);
         ~Editor();
 
         Editor(const Editor& other) = delete;

@@ -5,6 +5,7 @@
 #include <SDL3/SDL_events.h>
 
 #include "Blackbox.hpp"
+#include "DependencyInjection.hpp"
 #include "Core/FileIO.hpp"
 #include "Core/Window.hpp"
 #include "Editor/Editor.hpp"
@@ -18,10 +19,11 @@ void blackbox::Engine::Initialize()
 
     SDL_Init(SDL_INIT_VIDEO);
     
-    editor = std::make_unique<blackbox::editor::Editor>();
-    window = std::make_unique<blackbox::Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
-    renderer = std::make_unique<blackbox::graphics::GlRenderer>();
-    fileIO = std::make_unique<blackbox::FileIO>();
+    container = std::make_unique<blackbox::Container>();
+    container->Register<Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
+    container->Register<editor::Editor, Window&>();
+    container->Register<FileIO>();
+    container->Register<graphics::GlRenderer, FileIO&>();
 }
 
 void blackbox::Engine::Run()
@@ -68,7 +70,8 @@ void blackbox::Engine::Run()
             // Re-set viewport size on window resized
             if (event.type == SDL_EVENT_WINDOW_RESIZED)
             {
-                window->OnWindowResized(event.window.data1, event.window.data2);
+                auto [window] = container->Get<blackbox::Window>();
+                window.OnWindowResized(event.window.data1, event.window.data2);
             }
         }
 
@@ -80,9 +83,10 @@ void blackbox::Engine::Run()
             continue;
         }
 
-        editor->Tick(deltaTime);
-        renderer->Render();
-        window->SwapBuffers();
+        auto [editor, renderer, window] = container->Get<blackbox::editor::Editor, blackbox::graphics::GlRenderer, blackbox::Window>();
+        editor.Tick(deltaTime);
+        renderer.Render();
+        window.SwapBuffers();
         
         frameNumber++;
     }

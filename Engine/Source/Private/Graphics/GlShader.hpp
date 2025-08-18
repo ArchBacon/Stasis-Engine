@@ -4,15 +4,20 @@
 
 #include "Core/Types.hpp"
 
+namespace blackbox
+{
+    class FileIO;
+}
+
 namespace blackbox::graphics
 {
     class GlShader
     {
         unsigned shaderProgram {0};
+        FileIO& fileIO;
         
     public:
-        GlShader() = default;
-        GlShader(const std::string& vertexPath, const std::string& fragmentPath);
+        GlShader(FileIO& fileIO, const std::string& vertexPath, const std::string& fragmentPath);
 
         void Use() const;
 
