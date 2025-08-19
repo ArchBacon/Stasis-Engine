@@ -7,6 +7,8 @@ namespace blackbox::graphics
     class Camera
     {
     public:
+        Camera(float aspectRatio);
+
         float3 location {0.0f, 0.0f, 0.0f};
         float3 rotation {-90.0f, 0.0f, 0.0f};
 
@@ -19,6 +21,8 @@ namespace blackbox::graphics
         float nearPlane {0.1f};
         float farPlane {100.f};
 
+        float aspectRatio {0.0f};
+        
         Camera() = default;
         virtual ~Camera() = default;
         

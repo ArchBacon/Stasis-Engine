@@ -17,12 +17,14 @@ project "GLAD"
     {
         "include/glad",
     }
-
+    
     filter "configurations:Debug"
+        defines { "DEBUG" }
         runtime "Debug"
         symbols "On"
     
     filter "configurations:Development"
+        defines { "DEVELOPMENT" }
         runtime "Release"
         symbols "On"
         optimize "Debug"

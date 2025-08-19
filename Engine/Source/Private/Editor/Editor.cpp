@@ -7,9 +7,10 @@
 
 namespace blackbox::editor
 {
-    Editor::Editor()
+    Editor::Editor(Window& window)
+        : window(window)
     {
-        camera = std::make_unique<EditorCamera>();
+        camera = std::make_unique<EditorCamera>(window.Aspect());
     }
 
     Editor::~Editor() = default;
@@ -47,15 +48,16 @@ namespace blackbox::editor
             if (mousestate & SDL_BUTTON_RMASK)
             {
                 SDL_HideCursor();
-                SDL_SetWindowMouseGrab(::Engine.Window().window, true);
-                SDL_WarpMouseInWindow(::Engine.Window().window, ::Engine.Window().Width<float>() / 2, ::Engine.Window().Height<float>() / 2);
+                SDL_SetWindowMouseGrab(window.window, true);
+                SDL_WarpMouseInWindow(window.window, window.Width<float>() / 2, window.Height<float>() / 2);
                 
                 if (!camera->firstClick)
                 {
                     const bool invertY = false;
-                    float2 relativeMouseMovement {
-                        (x - ::Engine.Window().Width<float>() / 2) / ::Engine.Window().Width<float>(),
-                        (y - ::Engine.Window().Height<float>() / 2) / ::Engine.Window().Height<float>()
+                    float2 relativeMouseMovement
+                    {
+                        (x - window.Width<float>() / 2) / window.Width<float>(),
+                        (y - window.Height<float>() / 2) / window.Height<float>()
                     };
 
                     const float2 mouseMovement = relativeMouseMovement * camera->rotationSpeed;
@@ -67,7 +69,7 @@ namespace blackbox::editor
             else
             {
                 SDL_ShowCursor();
-                SDL_SetWindowMouseGrab(::Engine.Window().window, false);
+                SDL_SetWindowMouseGrab(window.window, false);
                 camera->firstClick = true;
             }
     }

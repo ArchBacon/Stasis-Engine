@@ -4,6 +4,7 @@
 **.vcxproj
 **.vcxproj.filters
 **.vcxproj.user
+**.DotSettings.user
 
 # IntelliJ user specific files
 .idea/

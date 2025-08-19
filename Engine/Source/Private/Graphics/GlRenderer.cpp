@@ -1,6 +1,10 @@
 ﻿#include "GlRenderer.hpp"
 
+#pragma warning(push)
+#pragma warning(disable: 4005) // macro redefinition
 #include <glad/glad.h>
+#pragma warning(pop)
+
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
@@ -9,6 +13,7 @@
 
 #include "Blackbox.hpp"
 #include "GlShader.hpp"
+#include "Core/DependencyInjection.hpp"
 #include "Core/Engine.hpp"
 #include "Core/Window.hpp"
 #include "Editor/Editor.hpp"
@@ -17,9 +22,10 @@
 
 namespace blackbox::graphics
 {
-    GlRenderer::GlRenderer()
+    GlRenderer::GlRenderer(FileIO& fileIO)
+        : fileIO{fileIO}
     {
-        shader = GlShader {"Shaders/basic.vert", "Shaders/basic.frag"};
+        shader = new GlShader{fileIO, "Shaders/basic.vert", "Shaders/basic.frag"};
 
         float vertices[]
         {
@@ -129,13 +135,14 @@ namespace blackbox::graphics
         glGenerateMipmap(GL_TEXTURE_2D);
         stbi_image_free(data);
 
-        shader.Use();
-        shader.SetInt("texture1", 0);
-        shader.SetInt("texture2", 1);
+        shader->Use();
+        shader->SetInt("texture1", 0);
+        shader->SetInt("texture2", 1);
 
         glEnable(GL_DEPTH_TEST);
 
-        camera = &::Engine.Editor().Camera();
+        auto [editor] = ::Engine.Container().Get<editor::Editor>();
+        camera = &editor.Camera();
     }
 
     GlRenderer::~GlRenderer()
@@ -169,10 +176,10 @@ namespace blackbox::graphics
         // auto model = glm::rotate(glm::mat4(1.0f), ::Engine.Uptime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
         auto projection = camera->ProjectionMatrix();
 
-        shader.Use();
+        shader->Use();
         // shader.SetMat4("model", model);
-        shader.SetMat4("view", view);
-        shader.SetMat4("projection", projection);
+        shader->SetMat4("view", view);
+        shader->SetMat4("projection", projection);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -186,7 +193,7 @@ namespace blackbox::graphics
             model = glm::translate(model, cubePositions[i]);
             float angle = 20.0f * i;
             model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            shader.SetMat4("model", model);
+            shader->SetMat4("model", model);
 
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
