@@ -1,5 +1,5 @@
-project "fastgltf"
-    kind "StaticLib"
+project "EnTT"
+    kind "None"  -- Header-only library
     language "C++"
     cppdialect "C++20"
     staticruntime "on"
@@ -18,31 +18,19 @@ project "fastgltf"
         "include",
     }
 
-    externalincludedirs
-    {
-         "../simdjson/include",  -- for SIMD JSON parsing
-    }
-
-    defines
-    {
-        "FASTGLTF_ENABLE_DOCS=OFF",
-        "FASTGLTF_COMPILE_AS_CPP20=ON",
-    }
-
     filter "configurations:Debug"
-        defines { "FASTGLTF_ENABLE_ASSERTS" }
+        defines { "ENTT_DEBUG" }
         runtime "Debug"
         symbols "On"
     
     filter "configurations:Development"
-        defines { "FASTGLTF_ENABLE_ASSERTS" }
+        defines { "ENTT_DEBUG" }
         runtime "Release"
         symbols "On"
         optimize "Debug"
     
     filter "configurations:Shipping"
-        defines { "NDEBUG" }
+        defines { "NDEBUG", "ENTT_DISABLE_ASSERT" }
         runtime "Release"
         symbols "Off"
         optimize "Full"
-

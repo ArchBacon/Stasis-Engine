@@ -7,30 +7,35 @@ project "GLM"
     targetdir ("%{wks.location}/Binaries/" .. outputdir .. "/Engine")
     objdir ("%{wks.location}/Intermediate/" .. outputdir .. "/Engine")    
 
-    files {
+    files
+    {
         "include/glm/**.hpp",
         "include/glm/**.inl",
         "include/glm/**.h"
     }
     
-    includedirs {
+    includedirs
+    {
         "include"
     }
 
+    defines
+    {
+        "GLM_ENABLE_EXPERIMENTAL",
+        "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+    }
 
     filter "configurations:Debug"
-        defines { "DEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
         runtime "Debug"
         symbols "On"
     
     filter "configurations:Development"
-        defines { "DEVELOPMENT", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
         runtime "Release"
         symbols "On"
         optimize "Debug"
     
     filter "configurations:Shipping"
-        defines { "SHIPPING", "NDEBUG", "GLM_FORCE_DEPTH_ZERO_TO_ONE" }
+        defines { "NDEBUG" }
         runtime "Release"
         symbols "Off"
         optimize "Full"

@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <glm/glm.hpp>
+#include <glm/gtx/transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -14,6 +15,7 @@
 #include "GlShader.hpp"
 #include "Core/DependencyInjection.hpp"
 #include "Core/Engine.hpp"
+#include "Core/Window.hpp"
 #include "Editor/Editor.hpp"
 #include "Editor/EditorCamera.hpp"
 #include "glm/gtx/quaternion.hpp"

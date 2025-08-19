@@ -3,6 +3,16 @@
 #include <memory>
 #include "Core/Types.hpp"
 
+namespace blackbox::editor
+{
+    class Editor;
+}
+
+namespace blackbox::graphics
+{
+    class GlRenderer;
+}
+
 namespace blackbox
 {
     class Container;
