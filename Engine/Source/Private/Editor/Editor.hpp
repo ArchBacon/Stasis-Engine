@@ -1,6 +1,7 @@
 ﻿#pragma once
 
-#include <memory>
+#include "Core/ECS.hpp"
+#include "Core/Types.hpp"
 
 namespace blackbox
 {
@@ -9,12 +10,18 @@ namespace blackbox
 
 namespace blackbox::editor
 {
-    class EditorCamera;
+    struct EditorType {};
     
     class Editor
     {
-        std::unique_ptr<EditorCamera> camera {nullptr};
         Window& window;
+        Entity camera {};
+        float cameraMoveSpeed {2.5f};
+        float cameraRotationSpeed {2.5f};
+        bool cameraFirstClick {true};
+
+        // TODO: Global config
+        float3 cameraUp {0.0f, 1.0f, 0.0f};
         
     public:
         Editor(Window& window);
@@ -24,8 +31,6 @@ namespace blackbox::editor
         Editor &operator=(const Editor&) = delete;
         Editor(Editor&& other) = delete;
         Editor& operator=(Editor&& other) = delete;
-
-        [[nodiscard]] EditorCamera& Camera() const { return *camera; }
 
         void Tick(float deltaTime);
     };

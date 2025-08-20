@@ -55,7 +55,7 @@ blackbox::Window::~Window()
     SDL_DestroyWindow(window);
 }
 
-float blackbox::Window::Aspect() const
+float blackbox::Window::AspectRatio() const
 {
     return Width<float>() / Height<float>();
 }

@@ -5,19 +5,16 @@
 #include <glad/glad.h>
 #pragma warning(pop)
 
-#include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include "Blackbox.hpp"
+#include "Camera.hpp"
 #include "GlShader.hpp"
 #include "Core/DependencyInjection.hpp"
+#include "Core/ECS.hpp"
 #include "Core/Engine.hpp"
 #include "Core/Window.hpp"
-#include "Editor/Editor.hpp"
-#include "Editor/EditorCamera.hpp"
 #include "glm/gtx/quaternion.hpp"
 
 namespace blackbox::graphics
@@ -140,9 +137,6 @@ namespace blackbox::graphics
         shader->SetInt("texture2", 1);
 
         glEnable(GL_DEPTH_TEST);
-
-        auto [editor] = ::Engine.Container().Get<editor::Editor>();
-        camera = &editor.Camera();
     }
 
     GlRenderer::~GlRenderer()
@@ -170,16 +164,14 @@ namespace blackbox::graphics
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        camera->Update();
-
-        glm::mat4 view = camera->ViewMatrix();
-        // auto model = glm::rotate(glm::mat4(1.0f), ::Engine.Uptime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        auto projection = camera->ProjectionMatrix();
+        auto& registry = ::Engine.Container().Get<EntityComponentSystem>().Registry();
+        const auto firstCamera = registry.view<Camera>().front();
+        auto camera = registry.get<Camera>(firstCamera);
 
         shader->Use();
         // shader.SetMat4("model", model);
-        shader->SetMat4("view", view);
-        shader->SetMat4("projection", projection);
+        shader->SetMat4("view", camera.viewMatrix);
+        shader->SetMat4("projection", camera.projectionMatrix);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture);

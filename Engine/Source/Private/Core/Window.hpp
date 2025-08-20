@@ -28,7 +28,7 @@ namespace blackbox
         [[nodiscard]] T Width() const;
         template <Numeric T = int>
         [[nodiscard]] T Height() const;
-        [[nodiscard]] float Aspect() const;
+        [[nodiscard]] float AspectRatio() const;
 
         void SwapBuffers() const;
         void EnableVSync(bool enabled = true) const;

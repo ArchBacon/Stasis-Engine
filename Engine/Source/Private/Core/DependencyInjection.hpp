@@ -26,8 +26,11 @@ namespace blackbox
         template <typename T, typename... Deps, typename... Args>
         void Register(Args&&... args);
 
+        template <typename T>
+        T& Get();
+        
         template <typename... T>
-        std::tuple<T&...> Get();
+        std::tuple<T&...> GetMultiple();
     };
 
     template <typename T, typename... Dependencies, typename... Args>
@@ -35,7 +38,7 @@ namespace blackbox
     {
         static_assert(std::constructible_from<T, Dependencies..., Args...>, "T must be constructible with Dependencies and Args");
 
-        auto dependencies = Get<std::remove_reference_t<Dependencies>...>();
+        auto dependencies = GetMultiple<std::remove_reference_t<Dependencies>...>();
         auto instance = std::apply([&args...](auto&... deps)
         {
             return new T(deps..., std::forward<Args>(args)...);
@@ -43,23 +46,45 @@ namespace blackbox
         instances[std::type_index(typeid(T))] = std::move(instance);
     }
 
-    template <typename... T>
-    std::tuple<T&...> Container::Get()
+    template <typename T>
+    T& Container::Get()
     {
-#ifndef SHIPPING
-        // Check if instances exist
-        auto checkInstance = [this]<typename U>(U typeWrapper)
-        {
-            using type = typename U::type;
-            const auto typeID = std::type_index(typeid(std::remove_reference_t<type>));
-            if (!instances.contains(typeID))
+    #ifndef SHIPPING
+            // Check if instances exist
+            auto checkInstance = [this]<typename U>(U)
             {
-                LogEngine->Error("Missing instance for type \"{}\"", typeid(std::remove_reference_t<type>).name());
-            }
-        };
-        (checkInstance(std::type_identity<T> {}), ...);
-#endif
+                using type = typename U::type;
+                const auto typeID = std::type_index(typeid(std::remove_reference_t<type>));
+                if (!instances.contains(typeID))
+                {
+                    LogEngine->Error("Missing instance for type \"{}\"", typeid(std::remove_reference_t<type>).name());
+                }
+            };
+            checkInstance(std::type_identity<T> {});
+    #endif
+    
+        // TODO: add validation
+        return *std::any_cast<std::remove_reference_t<T>*>(instances.at(std::type_index(typeid(T))));
+    }
 
+    template <typename ... T>
+    std::tuple<T&...> Container::GetMultiple()
+    {
+    #ifndef SHIPPING
+            // Check if instances exist
+            auto checkInstance = [this]<typename U>(U)
+            {
+                using type = typename U::type;
+                const auto typeID = std::type_index(typeid(std::remove_reference_t<type>));
+                if (!instances.contains(typeID))
+                {
+                    LogEngine->Error("Missing instance for type \"{}\"", typeid(std::remove_reference_t<type>).name());
+                }
+            };
+            (checkInstance(std::type_identity<T> {}), ...);
+    #endif
+    
+        // TODO: add validation
         return std::tuple<T&...>
         {
             *std::any_cast<std::remove_reference_t<T>*>(instances.at(std::type_index(typeid(T))))...
