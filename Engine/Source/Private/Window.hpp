@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
-#include "Core/Types.hpp"
+#include "Types.hpp"
 
 namespace blackbox
 {

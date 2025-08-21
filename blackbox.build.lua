@@ -33,12 +33,13 @@ project "Engine"
     files
     {
         "%{prj.name}/Content/**",
-        "%{prj.name}/Shaders/**",
         "%{prj.name}/Source/**",
+        "%{prj.name}/Source/Blackbox.hpp",
     }
 
     includedirs
     {
+        "%{prj.name}/Source/",
         "%{prj.name}/Source/Public/",
         "%{prj.name}/Source/Private/",
         "%{prj.name}/ThirdParty/*/include",

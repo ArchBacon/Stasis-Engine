@@ -5,6 +5,7 @@
 
 namespace blackbox
 {
+    class FileIO;
     // integers
     using int2 = glm::ivec2;
     using int3 = glm::ivec3;
@@ -23,4 +24,12 @@ namespace blackbox
     // Concepts
     template <typename T>
     concept Numeric = std::integral<T> || std::floating_point<T>;
+
+    template <typename T>
+    concept Object = requires(T t, float deltaTime)
+    {
+        { t.BeginPlay() } -> std::same_as<void>;
+        { t.Tick(deltaTime) } -> std::same_as<void>;
+        { t.Shutdown() } -> std::same_as<void>;
+    };
 }

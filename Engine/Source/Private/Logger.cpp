@@ -1,4 +1,4 @@
-﻿#include "Core/logger.hpp"
+﻿#include "Logger.hpp"
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 blackbox::Logger::Logger(const std::string& name)

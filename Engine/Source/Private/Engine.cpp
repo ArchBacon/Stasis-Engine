@@ -1,37 +1,28 @@
 ﻿#include "Engine.hpp"
 
 #include <chrono>
+#include <thread>
 
 #include <SDL3/SDL_events.h>
-#include <entt/entt.hpp>
-
 #include "Blackbox.hpp"
 #include "DependencyInjection.hpp"
-#include "ECS.hpp"
-#include "Core/FileIO.hpp"
-#include "Core/Window.hpp"
-#include "Editor/Editor.hpp"
-#include "Graphics/Camera.hpp"
-#include "Graphics/GlRenderer.hpp"
+#include "FileIO.hpp"
+#include "Window.hpp"
 
-blackbox::Engine Engine;
+blackbox::BlackboxEngine Engine;
 
-void blackbox::Engine::Initialize()
+void blackbox::BlackboxEngine::Initialize()
 {
     LogEngine->Trace("Initializing Engine...");
 
     SDL_Init(SDL_INIT_VIDEO);
     
     container = std::make_unique<blackbox::Container>();
-    container->Register<Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
-    container->Register<EntityComponentSystem>();
-    container->Register<editor::Editor, Window&>();
     container->Register<FileIO>();
-    container->Register<graphics::GlRenderer, FileIO&>();
-    container->Register<graphics::CameraSystem>();
+    container->Register<Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
 }
 
-void blackbox::Engine::Run()
+void blackbox::BlackboxEngine::Run()
 {
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
@@ -75,8 +66,7 @@ void blackbox::Engine::Run()
             // Re-set viewport size on window resized
             if (event.type == SDL_EVENT_WINDOW_RESIZED)
             {
-                auto& window = container->Get<blackbox::Window>();
-                window.OnWindowResized(event.window.data1, event.window.data2);
+                // window.OnWindowResized(event.window.data1, event.window.data2);
             }
         }
 
@@ -87,23 +77,14 @@ void blackbox::Engine::Run()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
-
-        auto [editor, renderer, window, cameras] = container->GetMultiple<
-            blackbox::editor::Editor,
-            blackbox::graphics::GlRenderer,
-            blackbox::Window,
-            graphics::CameraSystem
-        >();
-        editor.Tick(deltaTime);
-        cameras.Update(deltaTime);
-        renderer.Render();
-        window.SwapBuffers();
+        
+        // window.SwapBuffers();
         
         frameNumber++;
     }
 }
 
-void blackbox::Engine::Shutdown()
+void blackbox::BlackboxEngine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
     LogEngine->Info("Engine uptime: {}s", Uptime());

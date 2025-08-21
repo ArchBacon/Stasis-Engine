@@ -1,7 +1,6 @@
-﻿#include "Core/Window.hpp"
-
+﻿#include "Window.hpp"
 #include "Blackbox.hpp"
-#include "glad/glad.h"
+#include <glad/glad.h>
 
 blackbox::Window::Window(
     const uint32_t width,
