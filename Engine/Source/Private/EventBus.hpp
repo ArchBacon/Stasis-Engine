@@ -29,7 +29,6 @@ namespace blackbox
     {
         auto callback = [instance, method](Event& e)
         {
-            LogEngine->Info("Callback received event {} of size: {}", typeid(e).name(), sizeof(e));
             (instance->*method)(static_cast<const ParamType&>(e));
         };
 
