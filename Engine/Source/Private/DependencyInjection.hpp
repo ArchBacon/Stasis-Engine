@@ -24,24 +24,27 @@ namespace blackbox
         Container& operator=(Container&& other) = delete;
 
         template <typename T, typename... Deps, typename... Args>
-        void Register(Args&&... args);
+        T* Register(Args&&... args);
 
     private:
         template <typename... T>
-        std::tuple<T&...> Get();
+        [[nodiscard]] std::tuple<T&...> Get();
     };
 
     template <typename T, typename... Dependencies, typename... Args>
-    void Container::Register(Args&&... args)
+    T* Container::Register(Args&&... args)
     {
         static_assert(std::constructible_from<T, Dependencies..., Args...>, "T must be constructible with Dependencies and Args");
 
         auto dependencies = Get<std::remove_reference_t<Dependencies>...>();
         auto instance = std::apply([&args...](auto&... deps)
         {
-            return new T(deps..., std::forward<Args>(args)...);
+            return std::make_shared<T>(deps..., std::forward<Args>(args)...);
         }, dependencies);
+
+        T* raw = instance.get();
         instances[std::type_index(typeid(T))] = std::move(instance);
+        return raw;
     }
 
     template <typename... T>
@@ -61,7 +64,7 @@ namespace blackbox
         
         return std::tuple<T&...>
         {
-            *std::any_cast<std::remove_reference_t<T>*>(instances.at(std::type_index(typeid(T))))...
+            *std::any_cast<std::shared_ptr<std::remove_reference_t<T>>>(instances.at(std::type_index(typeid(T))))...
         };
     }
 }

@@ -6,17 +6,20 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include "Events.hpp"
 #include "Types.hpp"
 
 namespace blackbox
 {
+    class EventBus;
+    
     class Window
     {
-    public: // TODO: Make non-public
-        SDL_Window* window {nullptr};
+        SDL_Window* raw {nullptr};
+        EventBus& bus;
         
     public:
-        Window(uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});
+        Window(EventBus& bus, uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});
         ~Window();
 
         Window(const Window& other) = delete;
@@ -33,7 +36,7 @@ namespace blackbox
         void SwapBuffers() const;
         void EnableVSync(bool enabled = true) const;
         
-        void OnWindowResized(uint32_t width, uint32_t height) const;
+        void OnWindowResized(WindowResizedEvent event);
         
     private:
         [[nodiscard]] std::string GetBuildModeSuffix() const;
@@ -43,7 +46,7 @@ namespace blackbox
     T Window::Width() const
     {
         int32_t width {};
-        SDL_GetWindowSize(window, &width, nullptr);
+        SDL_GetWindowSize(raw, &width, nullptr);
 
         return static_cast<T>(width);
     }
@@ -52,7 +55,7 @@ namespace blackbox
     T Window::Height() const
     {
         int32_t height {};
-        SDL_GetWindowSize(window, nullptr, &height);
+        SDL_GetWindowSize(raw, nullptr, &height);
 
         return static_cast<T>(height);
     }

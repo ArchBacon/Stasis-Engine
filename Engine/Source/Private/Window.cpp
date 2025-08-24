@@ -2,12 +2,17 @@
 #include "Blackbox.hpp"
 #include <glad/glad.h>
 
+#include "EventBus.hpp"
+
 blackbox::Window::Window(
+    EventBus& bus, 
     const uint32_t width,
     const uint32_t height,
     const std::string& name,
     const std::string& icon
-) {
+) : bus(bus) {
+    bus.Subscribe<WindowResizedEvent>(this, &Window::OnWindowResized);
+    
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -15,7 +20,7 @@ blackbox::Window::Window(
     
     constexpr SDL_WindowFlags windowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     
-    window = SDL_CreateWindow(
+    raw = SDL_CreateWindow(
         (name + GetBuildModeSuffix()).c_str(),
         static_cast<int32_t>(width),
         static_cast<int32_t>(height),
@@ -25,11 +30,11 @@ blackbox::Window::Window(
     if (!icon.empty())
     {
         SDL_Surface* iconSurface = SDL_LoadBMP(icon.c_str());
-        SDL_SetWindowIcon(window, iconSurface);
+        SDL_SetWindowIcon(raw, iconSurface);
         SDL_DestroySurface(iconSurface);
     }
 
-    if (SDL_GL_CreateContext(window) == nullptr)
+    if (SDL_GL_CreateContext(raw) == nullptr)
     {
         LogEngine->Error("Failed to create openGL context. {}", SDL_GetError());
     }
@@ -51,7 +56,7 @@ blackbox::Window::Window(
 
 blackbox::Window::~Window()
 {
-    SDL_DestroyWindow(window);
+    SDL_DestroyWindow(raw);
 }
 
 float blackbox::Window::AspectRatio() const
@@ -61,7 +66,7 @@ float blackbox::Window::AspectRatio() const
 
 void blackbox::Window::SwapBuffers() const
 {
-    SDL_GL_SwapWindow(window);
+    SDL_GL_SwapWindow(raw);
 }
 
 void blackbox::Window::EnableVSync(const bool enabled) const
@@ -69,9 +74,10 @@ void blackbox::Window::EnableVSync(const bool enabled) const
     SDL_GL_SetSwapInterval(enabled);
 }
 
-void blackbox::Window::OnWindowResized(const uint32_t width, const uint32_t height) const
+void blackbox::Window::OnWindowResized(const WindowResizedEvent event)
 {
-    glViewport(0, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
+    LogEngine->Info("Resized window from ({}, {}) -> ({}, {})", Width(), Height(), event.newWindowSize.x, event.newWindowSize.y);
+    glViewport(0, 0, static_cast<int32_t>(event.newWindowSize.y), static_cast<int32_t>(event.newWindowSize.y));
 }
 
 std::string blackbox::Window::GetBuildModeSuffix() const

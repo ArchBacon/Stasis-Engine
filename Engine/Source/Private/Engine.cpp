@@ -8,6 +8,7 @@
 #include "DependencyInjection.hpp"
 #include "FileIO.hpp"
 #include "Window.hpp"
+#include "Helpers/SDL3Helper.hpp"
 
 blackbox::BlackboxEngine Engine;
 
@@ -16,10 +17,17 @@ void blackbox::BlackboxEngine::Initialize()
     LogEngine->Trace("Initializing Engine...");
 
     SDL_Init(SDL_INIT_VIDEO);
-    
-    container = std::make_unique<blackbox::Container>();
-    container->Register<FileIO>();
-    container->Register<Window>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
+
+    container = std::make_unique<Container>();
+    eventbus = container->Register<EventBus>();
+    fileIO = container->Register<FileIO>();
+    window = container->Register<Window, EventBus&>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
+
+    eventbus->Subscribe<QuitEvent>(this, &BlackboxEngine::RequestShutdown);
+    eventbus->Subscribe<WindowMinimizedEvent>(this, &BlackboxEngine::StopRendering);
+    eventbus->Subscribe<WindowFocusLostEvent>(this, &BlackboxEngine::StopRendering);
+    eventbus->Subscribe<WindowRestoredEvent>(this, &BlackboxEngine::StartRendering);
+    eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -36,37 +44,15 @@ void blackbox::BlackboxEngine::Run()
         const float frameTime = elapsed / 1000.0f; // time in milliseconds
         previousTime = currentTime;
 
-        // Handle events in a queue
         while (SDL_PollEvent(&event))
         {
-            // TODO: handle these events in an event bus or something, so that I don't have a gigantic list of events for everything here.
+            SDL3EventToBlackBoxEvent::Broadcast(event, *eventbus);
             
-            // Close the window when the user ALT-F4s or closes the window
-            if (event.type == SDL_EVENT_QUIT)
-            {
-                isRunning = false;
-            }
-
+            /// TODO: Move to input mappings
             // Close on ESC key press
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
             {
                 isRunning = false;
-            }
-
-            // Pause rendering when the window is minimized or loses focus
-            if (event.type == SDL_EVENT_WINDOW_MINIMIZED || event.type == SDL_EVENT_WINDOW_FOCUS_LOST)
-            {
-                stopRendering = true;
-            }
-            if (event.type == SDL_EVENT_WINDOW_RESTORED || event.type == SDL_EVENT_WINDOW_FOCUS_GAINED)
-            {
-                stopRendering = false;
-            }
-
-            // Re-set viewport size on window resized
-            if (event.type == SDL_EVENT_WINDOW_RESIZED)
-            {
-                // window.OnWindowResized(event.window.data1, event.window.data2);
             }
         }
 
@@ -78,7 +64,7 @@ void blackbox::BlackboxEngine::Run()
             continue;
         }
         
-        // window.SwapBuffers();
+        window->SwapBuffers();
         
         frameNumber++;
     }
