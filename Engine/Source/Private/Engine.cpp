@@ -9,6 +9,7 @@
 #include "FileIO.hpp"
 #include "Window.hpp"
 #include "Helpers/SDL3Helper.hpp"
+#include "Input/Input.hpp"
 
 blackbox::BlackboxEngine Engine;
 
@@ -22,6 +23,7 @@ void blackbox::BlackboxEngine::Initialize()
     eventbus = container->Register<EventBus>();
     fileIO = container->Register<FileIO>();
     window = container->Register<Window, EventBus&>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
+    input = container->Register<Input, EventBus&>();
 
     eventbus->Subscribe<QuitEvent>(this, &BlackboxEngine::RequestShutdown);
     eventbus->Subscribe<WindowMinimizedEvent>(this, &BlackboxEngine::StopRendering);
@@ -48,12 +50,18 @@ void blackbox::BlackboxEngine::Run()
         {
             SDL3EventToBlackBoxEvent::Broadcast(event, *eventbus);
             
-            /// TODO: Move to input mappings
-            // Close on ESC key press
+            // /// TODO: Move to input mappings
+            // // Close on ESC key press
             if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
             {
                 isRunning = false;
             }
+
+            input->RegisterAction("Exit", ActionType::Digital, {});
+            auto& exitEvent = input->GetEvent<bool>("Exit");
+            exitEvent.OnStarted(this, &BlackboxEngine::OnExitStarted);
+            exitEvent.OnTriggered(this, &BlackboxEngine::OnExitTriggered);
+            exitEvent.OnEnded(this, &BlackboxEngine::OnExitEnded);
         }
 
         // Do not draw if we are minimized

@@ -16,10 +16,10 @@ namespace blackbox
     class Window
     {
         SDL_Window* raw {nullptr};
-        EventBus& bus;
+        EventBus& eventbus;
         
     public:
-        Window(EventBus& bus, uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});
+        Window(EventBus& eventbus, uint32_t width, uint32_t height, const std::string& name, const std::string& icon = {});
         ~Window();
 
         Window(const Window& other) = delete;

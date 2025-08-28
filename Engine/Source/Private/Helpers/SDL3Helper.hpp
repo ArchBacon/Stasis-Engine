@@ -12,27 +12,27 @@ namespace blackbox
     class SDL3EventToBlackBoxEvent
     {
     public:
-        static void Broadcast(SDL_Event& e, EventBus& bus)
+        static void Broadcast(SDL_Event& e, EventBus& eventbus)
         {
             switch (static_cast<SDL_EventType>(e.type))
             {
             case SDL_EVENT_QUIT:
-                bus.Broadcast(QuitEvent {});
+                eventbus.Broadcast(QuitEvent {});
                 break;
             case SDL_EVENT_WINDOW_MINIMIZED:
-                bus.Broadcast(WindowMinimizedEvent {});
+                eventbus.Broadcast(WindowMinimizedEvent {});
                 break;
             case SDL_EVENT_WINDOW_RESTORED:
-                bus.Broadcast(WindowRestoredEvent {});
+                eventbus.Broadcast(WindowRestoredEvent {});
                 break;
             case SDL_EVENT_WINDOW_RESIZED:
-                bus.Broadcast(WindowResizedEvent {.newWindowSize = {e.window.data1, e.window.data2}});
+                eventbus.Broadcast(WindowResizedEvent {.newWindowSize = {e.window.data1, e.window.data2}});
                 break;
             case SDL_EVENT_WINDOW_FOCUS_LOST:
-                bus.Broadcast(WindowFocusLostEvent {});
+                eventbus.Broadcast(WindowFocusLostEvent {});
                 break;
             case SDL_EVENT_WINDOW_FOCUS_GAINED:
-                bus.Broadcast(WindowFocusGainedEvent {});
+                eventbus.Broadcast(WindowFocusGainedEvent {});
                 break;
             case SDL_EVENT_MOUSE_MOTION:
             case SDL_EVENT_KEY_DOWN:

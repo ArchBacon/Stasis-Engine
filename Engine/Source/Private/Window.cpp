@@ -5,13 +5,13 @@
 #include "EventBus.hpp"
 
 blackbox::Window::Window(
-    EventBus& bus, 
+    EventBus& eventbus, 
     const uint32_t width,
     const uint32_t height,
     const std::string& name,
     const std::string& icon
-) : bus(bus) {
-    bus.Subscribe<WindowResizedEvent>(this, &Window::OnWindowResized);
+) : eventbus(eventbus) {
+    eventbus.Subscribe<WindowResizedEvent>(this, &Window::OnWindowResized);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
