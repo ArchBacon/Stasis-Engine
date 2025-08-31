@@ -37,13 +37,11 @@ namespace blackbox
         [[nodiscard]] uint32_t FrameNumber() const { return frameNumber; }
 
     private:
-        void RequestShutdown(const QuitEvent&) { isRunning = false; }
+        void RequestShutdown(const ShutdownEvent&) { isRunning = false; }
         void StopRendering(const Event&) { stopRendering = true; }
         void StartRendering(const Event&) { stopRendering = false; }
 
-        void OnExitStarted(bool) { LogEngine->Info("OnExitStarted()"); }
-        void OnExitEnded(bool) { LogEngine->Info("OnExitEnded()"); }
-        void OnExitTriggered(bool) { LogEngine->Info("OnExitTriggered()"); }
+        void OnCloseAction(bool) { RequestShutdown({}); }
     };
 }
 

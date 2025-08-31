@@ -76,8 +76,8 @@ void blackbox::Window::EnableVSync(const bool enabled) const
 
 void blackbox::Window::OnWindowResized(const WindowResizedEvent event)
 {
-    LogEngine->Info("Resized window from ({}, {}) -> ({}, {})", Width(), Height(), event.newWindowSize.x, event.newWindowSize.y);
-    glViewport(0, 0, static_cast<int32_t>(event.newWindowSize.y), static_cast<int32_t>(event.newWindowSize.y));
+    LogEngine->Info("Resized window from ({}, {}) -> ({}, {})", Width(), Height(), event.windowSize.x, event.windowSize.y);
+    glViewport(0, 0, static_cast<int32_t>(event.windowSize.y), static_cast<int32_t>(event.windowSize.y));
 }
 
 std::string blackbox::Window::GetBuildModeSuffix() const

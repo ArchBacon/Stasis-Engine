@@ -8,8 +8,11 @@
 #include "DependencyInjection.hpp"
 #include "FileIO.hpp"
 #include "Window.hpp"
-#include "Helpers/SDL3Helper.hpp"
+#include "Helpers/SDL3EventHelper.hpp"
 #include "Input/Input.hpp"
+#include "Input/InputActionType.hpp"
+#include "Input/InputContext.hpp"
+#include "Input/InputKeys.hpp"
 
 blackbox::BlackboxEngine Engine;
 
@@ -19,17 +22,27 @@ void blackbox::BlackboxEngine::Initialize()
 
     SDL_Init(SDL_INIT_VIDEO);
 
+    // Populate the DI container
     container = std::make_unique<Container>();
     eventbus = container->Register<EventBus>();
     fileIO = container->Register<FileIO>();
     window = container->Register<Window, EventBus&>(1024, 576, "Blackbox", "Content/Icon64x64.bmp");
     input = container->Register<Input, EventBus&>();
 
-    eventbus->Subscribe<QuitEvent>(this, &BlackboxEngine::RequestShutdown);
+    // Subscribe to events and assign callbacks
+    eventbus->Subscribe<ShutdownEvent>(this, &BlackboxEngine::RequestShutdown);
     eventbus->Subscribe<WindowMinimizedEvent>(this, &BlackboxEngine::StopRendering);
     eventbus->Subscribe<WindowFocusLostEvent>(this, &BlackboxEngine::StopRendering);
     eventbus->Subscribe<WindowRestoredEvent>(this, &BlackboxEngine::StartRendering);
     eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
+
+    /** TODO: move to editor instead of engine itself */
+    // Get/Create context
+    auto& windowContext = input->GetContext("WindowContext");
+    // add actions to context
+    windowContext.AddAction<bool>("CloseAction", {Keyboard::Escape});
+    // Enable context so that it can be used
+    input->EnableContext("WindowContext");
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -37,6 +50,9 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
+    auto& action = input->GetContext("WindowContext").GetAction<bool>("CloseAction");
+    action.OnStarted(this, &BlackboxEngine::OnCloseAction);
+    
     while (isRunning)
     {
         const auto currentTime = std::chrono::high_resolution_clock::now();
@@ -48,20 +64,7 @@ void blackbox::BlackboxEngine::Run()
 
         while (SDL_PollEvent(&event))
         {
-            SDL3EventToBlackBoxEvent::Broadcast(event, *eventbus);
-            
-            // /// TODO: Move to input mappings
-            // // Close on ESC key press
-            if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
-            {
-                isRunning = false;
-            }
-
-            input->RegisterAction("Exit", ActionType::Digital, {});
-            auto& exitEvent = input->GetEvent<bool>("Exit");
-            exitEvent.OnStarted(this, &BlackboxEngine::OnExitStarted);
-            exitEvent.OnTriggered(this, &BlackboxEngine::OnExitTriggered);
-            exitEvent.OnEnded(this, &BlackboxEngine::OnExitEnded);
+            SDL3ToBlackBoxEvent::Broadcast(event, *eventbus);
         }
 
         // Do not draw if we are minimized
@@ -71,7 +74,8 @@ void blackbox::BlackboxEngine::Run()
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
-        
+
+        input->Update(); // TODO: Consider sending tick event through event bus
         window->SwapBuffers();
         
         frameNumber++;
