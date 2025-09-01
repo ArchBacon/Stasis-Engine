@@ -1,10 +1,13 @@
 ﻿#pragma once
 
 #include <memory>
+
+#include "Blackbox.hpp"
 #include "EventBus.hpp"
 
 namespace blackbox
 {
+    class Input;
     class Container;
     class Window;
     class FileIO;
@@ -15,6 +18,7 @@ namespace blackbox
         EventBus* eventbus {nullptr};
         FileIO* fileIO {nullptr};
         Window* window {nullptr};
+        Input* input {nullptr};
 
         bool stopRendering {false};
         bool isRunning {true};
@@ -33,9 +37,11 @@ namespace blackbox
         [[nodiscard]] uint32_t FrameNumber() const { return frameNumber; }
 
     private:
-        void RequestShutdown(const QuitEvent&) { isRunning = false; }
+        void RequestShutdown(const ShutdownEvent&) { isRunning = false; }
         void StopRendering(const Event&) { stopRendering = true; }
         void StartRendering(const Event&) { stopRendering = false; }
+
+        void OnCloseAction(bool) { RequestShutdown({}); }
     };
 }
 

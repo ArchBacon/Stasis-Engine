@@ -5,13 +5,13 @@
 #include "EventBus.hpp"
 
 blackbox::Window::Window(
-    EventBus& bus, 
+    EventBus& eventbus, 
     const uint32_t width,
     const uint32_t height,
     const std::string& name,
     const std::string& icon
-) : bus(bus) {
-    bus.Subscribe<WindowResizedEvent>(this, &Window::OnWindowResized);
+) : eventbus(eventbus) {
+    eventbus.Subscribe<WindowResizedEvent>(this, &Window::OnWindowResized);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -76,8 +76,8 @@ void blackbox::Window::EnableVSync(const bool enabled) const
 
 void blackbox::Window::OnWindowResized(const WindowResizedEvent event)
 {
-    LogEngine->Info("Resized window from ({}, {}) -> ({}, {})", Width(), Height(), event.newWindowSize.x, event.newWindowSize.y);
-    glViewport(0, 0, static_cast<int32_t>(event.newWindowSize.y), static_cast<int32_t>(event.newWindowSize.y));
+    LogEngine->Info("Resized window from ({}, {}) -> ({}, {})", Width(), Height(), event.windowSize.x, event.windowSize.y);
+    glViewport(0, 0, static_cast<int32_t>(event.windowSize.y), static_cast<int32_t>(event.windowSize.y));
 }
 
 std::string blackbox::Window::GetBuildModeSuffix() const

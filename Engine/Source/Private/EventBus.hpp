@@ -6,7 +6,6 @@
 #include <vector>
 #include <SDL3/SDL_events.h>
 
-#include "Blackbox.hpp"
 #include "Events.hpp"
 
 namespace blackbox
