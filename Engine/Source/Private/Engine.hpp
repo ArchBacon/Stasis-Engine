@@ -1,9 +1,8 @@
 ﻿#pragma once
 
 #include <memory>
-
-#include "Blackbox.hpp"
 #include "EventBus.hpp"
+#include "Input/InputValue.hpp"
 
 namespace blackbox
 {
@@ -41,7 +40,7 @@ namespace blackbox
         void StopRendering(const Event&) { stopRendering = true; }
         void StartRendering(const Event&) { stopRendering = false; }
 
-        void OnCloseAction(bool) { RequestShutdown({}); }
+        void OnCloseAction(InputValue) { RequestShutdown({}); }
     };
 }
 

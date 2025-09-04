@@ -3,6 +3,9 @@
 #include "Blackbox.hpp"
 #include "Events.hpp"
 #include "SDL3InputHelper.hpp"
+#include "Input/InputMapping.hpp"
+#include "Input/InputMappingContext.hpp"
+#include "Input/KeyMapping.hpp"
 
 namespace blackbox
 {

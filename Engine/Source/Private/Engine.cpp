@@ -10,9 +10,6 @@
 #include "Window.hpp"
 #include "Helpers/SDL3EventHelper.hpp"
 #include "Input/Input.hpp"
-#include "Input/InputActionType.hpp"
-#include "Input/InputContext.hpp"
-#include "Input/InputKeys.hpp"
 
 blackbox::BlackboxEngine Engine;
 
@@ -37,12 +34,7 @@ void blackbox::BlackboxEngine::Initialize()
     eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
 
     /** TODO: move to editor instead of engine itself */
-    // Get/Create context
-    auto& windowContext = input->GetContext("WindowContext");
-    // add actions to context
-    windowContext.AddAction<bool>("CloseAction", {Keyboard::Escape});
-    // Enable context so that it can be used
-    input->EnableContext("WindowContext");
+    input->AddContext<IMC_Driving>();
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -50,7 +42,7 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
-    auto& action = input->GetContext("WindowContext").GetAction<bool>("CloseAction");
+    auto& action = input->GetAction<SteeringAction>();
     action.OnStarted(this, &BlackboxEngine::OnCloseAction);
     
     while (isRunning)
@@ -75,7 +67,8 @@ void blackbox::BlackboxEngine::Run()
             continue;
         }
 
-        input->Update(); // TODO: Consider sending tick event through event bus
+        // TODO: Consider sending tick event through event bus
+        input->Update();
         window->SwapBuffers();
         
         frameNumber++;
@@ -86,6 +79,8 @@ void blackbox::BlackboxEngine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
     LogEngine->Info("Engine uptime: {}s", Uptime());
+
+    input->RemoveContext<IMC_Driving>();
 
     SDL_Quit();
 }

@@ -9,6 +9,7 @@ namespace blackbox
     
     // Engine Events
     struct ShutdownEvent : Event {};
+    struct TickEvent : Event { float deltaTime {0.0f}; };
     
     // Keyboard Input Events
     struct KeyPressedEvent : Event { Keyboard key {}; };

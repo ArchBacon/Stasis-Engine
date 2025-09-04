@@ -1,26 +1,28 @@
 ﻿#pragma once
-
-#include <string>
+#include <memory>
+#include <ranges>
+#include <typeindex>
 #include <unordered_map>
+#include <vector>
 
-#include "InputContext.hpp"
+#include "Blackbox.hpp"
+#include "InputAction.hpp"
+#include "InputMappingContext.hpp"
 
 namespace blackbox
 {
-    enum class ActionType : uint8_t;
-    struct InputContext;
-    struct KeyPressedEvent;
+    struct TickEvent;
     struct KeyReleasedEvent;
+    struct KeyPressedEvent;
     class EventBus;
 
     class Input
     {
         EventBus& eventbus;
 
-        // All contexts live on this map on creating until enabled
-        std::unordered_map<std::string, InputContext> inactiveContexts {};
-        std::unordered_map<std::string, InputContext> activeContexts {};
-        
+        std::unordered_map<std::type_index, std::unique_ptr<InputMappingContext>> contexts {};
+        std::unordered_map<std::type_index, std::unique_ptr<InputAction>> actions {};
+            
     public:
         Input(EventBus& eventbus);
         ~Input() = default;
@@ -30,15 +32,62 @@ namespace blackbox
         Input(Input&& other) = delete;
         Input& operator=(Input&& other) = delete;
 
-        void Update();
+        template <InputMappingContextType T>
+        void AddContext();
         
-        InputContext& GetContext(const std::string& name);
-        void EnableContext(const std::string& name);
-        void DisableContext(const std::string& name);
-        void DisableAllContexts();
+        template <InputMappingContextType T>
+        void RemoveContext();
+
+        void Clear();
+
+        template <InputActionType T>
+        [[nodiscard]] T& GetAction();
 
     private:
-        void OnKeyDown(KeyPressedEvent event);
-        void OnKeyUp(KeyReleasedEvent event);
+        void OnKeyPressedEvent(KeyPressedEvent event);
+        void OnKeyReleasedEvent(KeyReleasedEvent event);
+        void OnTickEvent(TickEvent event);
     };
+
+    template <InputMappingContextType T>
+    void Input::AddContext()
+    {
+        const auto type = std::type_index(typeid(T));
+        if (contexts.contains(type))
+        {
+            LogEngine->Warn("Context `{}` already added on input system.", type.name());
+            return;
+        }
+
+        contexts[type] = std::make_unique<T>();
+        auto& context = contexts[type];
+        for (auto& mapping : context->mappings)
+        {
+            mapping.second
+        } 
+    }
+
+    template <InputMappingContextType T>
+    void Input::RemoveContext()
+    {
+        const auto type = std::type_index(typeid(T));
+        if (!contexts.contains(type))
+        {
+            LogEngine->Warn("Context `{}` does not exist on input system.", type.name());
+        }
+        
+        contexts.erase(type);
+    }
+
+    template <InputActionType T>
+    T& Input::GetAction()
+    {
+        const auto type = std::type_index(typeid(T));
+        if (!contexts.contains(type))
+        {
+            LogEngine->Warn("Action `{}` does not exist on any active context.", type.name());
+        }
+
+        return contexts[type];
+    }
 }
