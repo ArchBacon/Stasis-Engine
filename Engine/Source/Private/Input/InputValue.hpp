@@ -6,8 +6,6 @@ namespace blackbox
 {
     class InputValue
     {
-        friend struct InputModifier;
-        
         float2 value {0.0f, 0.0f};
 
     public:

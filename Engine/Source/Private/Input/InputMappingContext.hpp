@@ -1,47 +1,29 @@
 ﻿#pragma once
 
-#include <vector>
-
-#include "InputMapping.hpp"
+#include <type_traits>
+#include "KeyBinding.hpp"
 
 namespace blackbox
 {
-    class InputMappingContext
+    struct InputMappingContext
     {
-        friend class Input;
-        
-        // std::vector<InputMapping> mappings {};
-        std::unordered_map<std::type_index, InputMapping> mappings {};
-        
-    public:
-        InputMappingContext(const std::vector<InputMapping>& inMappings)
+        std::unordered_map<InputKey, std::shared_ptr<KeyBinding>, InputKeyHash> keybinds {};
+
+        InputMappingContext(const std::vector<InputMapping>& mappings)
         {
-            for (auto mapping : inMappings)
+            for (auto& mapping : mappings)
             {
-                mappings[std::type_index(typeid(mapping.action))] = std::move(mapping);
+                for (auto& keyMapping : mapping.keyMappings)
+                {
+                    keybinds[keyMapping.key] = std::make_shared<KeyBinding>(KeyBinding{
+                        .actionType = mapping.actionType,
+                        .contextType = std::type_index(typeid(*this)),
+                        .modifiers = keyMapping.modifiers,
+                    });
+                } 
             } 
         }
     };
-
     template <typename T>
     concept InputMappingContextType = std::is_base_of_v<InputMappingContext, T> && !std::is_same_v<InputMappingContext, T>;
-
-    // TODO: Example code for API design
-    struct SteeringAction : InputAction {};
-    struct ThrottleAction : InputAction {};
-
-    class IMC_Driving final : public InputMappingContext
-    {
-        IMC_Driving() : InputMappingContext({
-            InputMapping<SteeringAction> {
-                {Keyboard::A, {Swizzle{}, Negate{}}},
-                {Keyboard::D, {Swizzle{}}},
-                {Controller::Stick::Motion::Left, {Deadzone{.deadzone = 0.2f}}},
-            },
-            InputMapping<ThrottleAction> {
-                {Keyboard::W, {}},
-                {Keyboard::S, {Negate{}}},
-            },
-        }) {}
-    };
 }

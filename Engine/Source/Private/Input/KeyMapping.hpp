@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <memory>
 #include <vector>
 
 #include "InputKeys.hpp"
@@ -7,14 +8,15 @@
 
 namespace blackbox
 {
-    class KeyMapping
+    struct KeyMapping
     {
         InputKey key {Keyboard::None};
-        std::vector<InputModifier> modifiers {};
+        std::vector<std::shared_ptr<InputModifier>> modifiers {};
 
-    public:
-        KeyMapping(const InputKey key, std::vector<InputModifier> modifiers)
-            : key(key), modifiers(std::move(modifiers))
-        {}
+        template <InputModifierType... T>
+        KeyMapping(const InputKey key, T&&... mods) : key(key)
+        {
+            (modifiers.push_back(std::make_shared<std::decay_t<T>>(std::forward<T>(mods))), ...);
+        }
     };
 }

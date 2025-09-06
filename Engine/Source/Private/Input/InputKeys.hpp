@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <typeindex>
 #include <variant>
 
 namespace blackbox
@@ -41,17 +42,25 @@ namespace blackbox
         }
     }
 
-    using InputKey = std::variant<
-        Keyboard,
-        Mouse::Button,
-        Mouse::Motion,
-        Mouse::Wheel,
-        Controller::FaceButton,
-        Controller::Shoulder,
-        Controller::Trigger,
-        Controller::Stick::Motion,
-        Controller::Stick::Pressed,
-        Controller::DPad,
-        Controller::Special
-    >;
+    struct InputKey
+    {
+        std::type_index type;
+        uint32_t value;
+
+        template <typename EnumType>
+        InputKey(EnumType enumValue)
+            : type(std::type_index(typeid(EnumType)))
+            , value(static_cast<uint32_t>(enumValue))
+        {}
+
+        bool operator==(const InputKey&) const = default;
+    };
+
+    struct InputKeyHash
+    {
+        size_t operator()(const InputKey& key) const
+        {
+            return key.type.hash_code() ^ (static_cast<size_t>(key.value) << 1);
+        }
+    };
 }

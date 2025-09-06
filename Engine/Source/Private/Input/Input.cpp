@@ -13,23 +13,9 @@ namespace blackbox
         eventbus.Subscribe<TickEvent>(this, &Input::OnTickEvent);
     }
 
-    void Input::Clear()
-    {
-        contexts.clear();
-    }
+    void Input::RemoveAllContexts() { contexts.clear(); }
     
-    void Input::OnKeyPressedEvent(const KeyPressedEvent event)
-    {
-        event.key;
-    }
-
-    void Input::OnKeyReleasedEvent(const KeyReleasedEvent event)
-    {
-        event.key;
-    }
-
-    void Input::OnTickEvent(const TickEvent event)
-    {
-        event.deltaTime;
-    }
+    void Input::OnKeyPressedEvent(const KeyPressedEvent) {}
+    void Input::OnKeyReleasedEvent(const KeyReleasedEvent) {}
+    void Input::OnTickEvent(const TickEvent) {}
 }

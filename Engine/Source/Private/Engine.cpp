@@ -18,7 +18,7 @@ void blackbox::BlackboxEngine::Initialize()
     LogEngine->Trace("Initializing Engine...");
 
     SDL_Init(SDL_INIT_VIDEO);
-
+    
     // Populate the DI container
     container = std::make_unique<Container>();
     eventbus = container->Register<EventBus>();
@@ -32,9 +32,6 @@ void blackbox::BlackboxEngine::Initialize()
     eventbus->Subscribe<WindowFocusLostEvent>(this, &BlackboxEngine::StopRendering);
     eventbus->Subscribe<WindowRestoredEvent>(this, &BlackboxEngine::StartRendering);
     eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
-
-    /** TODO: move to editor instead of engine itself */
-    input->AddContext<IMC_Driving>();
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -42,9 +39,6 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
-    auto& action = input->GetAction<SteeringAction>();
-    action.OnStarted(this, &BlackboxEngine::OnCloseAction);
-    
     while (isRunning)
     {
         const auto currentTime = std::chrono::high_resolution_clock::now();
@@ -67,8 +61,7 @@ void blackbox::BlackboxEngine::Run()
             continue;
         }
 
-        // TODO: Consider sending tick event through event bus
-        input->Update();
+        eventbus->Broadcast(TickEvent{.deltaTime = deltaTime});
         window->SwapBuffers();
         
         frameNumber++;
@@ -79,8 +72,6 @@ void blackbox::BlackboxEngine::Shutdown()
 {
     LogEngine->Trace("Shutting Down Engine...");
     LogEngine->Info("Engine uptime: {}s", Uptime());
-
-    input->RemoveContext<IMC_Driving>();
 
     SDL_Quit();
 }
