@@ -32,6 +32,8 @@ void blackbox::BlackboxEngine::Initialize()
     eventbus->Subscribe<WindowFocusLostEvent>(this, &BlackboxEngine::StopRendering);
     eventbus->Subscribe<WindowRestoredEvent>(this, &BlackboxEngine::StartRendering);
     eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
+
+    input->AddContext<EngineContext>();
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -39,6 +41,10 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
+    auto& exitEvent = input->GetAction<ExitEngineAction>();
+    exitEvent.OnTriggered(this, &BlackboxEngine::OnTriggeredAction);
+    exitEvent.OnEnded(this, &BlackboxEngine::OnCloseAction);
+    
     while (isRunning)
     {
         const auto currentTime = std::chrono::high_resolution_clock::now();

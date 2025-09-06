@@ -9,6 +9,8 @@ namespace blackbox
         float2 value {0.0f, 0.0f};
 
     public:
+        InputValue(const float2 value) : value(value) {}
+        
         template <typename T>
         T Get();
     };

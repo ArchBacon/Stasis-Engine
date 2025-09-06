@@ -5,15 +5,21 @@
 
 namespace blackbox
 {
-    struct InputMapping
+    struct InputMappingBase
     {
         std::type_index actionType;
         std::vector<KeyMapping> keyMappings {};
 
-        template <typename T>
-        InputMapping(const std::initializer_list<KeyMapping>& inKeyMappings)
-            : actionType(std::type_index(typeid(T)))
+        InputMappingBase() : actionType(typeid(*this)) {}
+        virtual ~InputMappingBase() = default;
+    };
+    
+    template <typename T>
+    struct InputMapping : InputMappingBase
+    {
+        InputMapping(const std::initializer_list<KeyMapping> inKeyMappings)
         {
+            actionType = std::type_index(typeid(T));
             keyMappings = inKeyMappings;
         }
     };

@@ -1,16 +1,16 @@
 ﻿#pragma once
 
 #include <memory>
-#include <set>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Blackbox.hpp"
+#include "Events.hpp"
 #include "InputAction.hpp"
 #include "InputKeys.hpp"
 #include "InputMapping.hpp"
 #include "InputMappingContext.hpp"
-#include "InputModifier.hpp"
 #include "KeyBinding.hpp"
 
 namespace blackbox
@@ -20,30 +20,32 @@ namespace blackbox
     struct KeyPressedEvent;
     struct TickEvent;
 
-    // TODO: Example code for API design
-    struct SteeringAction {};
-    struct ThrottleAction {};
-    
-    class IMC_Driving final : public InputMappingContext
-    {
-        IMC_Driving() : InputMappingContext({
-            InputMapping<SteeringAction> {
-                {Keyboard::A, Swizzle{}, Negate{}},
-                {Keyboard::D, Swizzle{}},
-                {Controller::Stick::Motion::Left, Deadzone{.deadzone = 0.2f}},
-            },
-            InputMapping<ThrottleAction> {
-                {Keyboard::W},
-                {Keyboard::S, Negate{}},
-            },
-        }) {}
-    };
-    
+    /**
+    Example for defining an Input mapping context
+     
+        struct SteeringAction {};
+        struct ThrottleAction {};
+        struct IMC_Driving final : InputMappingContext<IMC_Driving>
+        {
+            IMC_Driving() : InputMappingContext({
+                InputMapping<SteeringAction> {
+                    {Keyboard::A, Swizzle{}, Negate{}},
+                    {Keyboard::D, Swizzle{}},
+                    {Controller::Stick::Motion::Left, Deadzone{0.2f}},
+                },
+                InputMapping<ThrottleAction> {
+                    {Keyboard::W},
+                    {Keyboard::S, Negate{}},
+                },
+            }) {}
+        };
+    */
     class Input
     {
         EventBus& eventbus;
         
-        std::set<std::type_index> contexts {};
+        std::unordered_set<std::type_index> contexts {};
+        std::unordered_set<InputKey, InputKeyHash> activeKeys {};
         std::unordered_map<std::type_index, std::unique_ptr<InputAction>> actions {};
         std::unordered_map<InputKey, std::shared_ptr<KeyBinding>, InputKeyHash> keybinds {};
 
@@ -65,14 +67,13 @@ namespace blackbox
         // Disable all active contexts
         void RemoveAllContexts();
 
-        template <InputActionType T>
-        [[nodiscard]] T& GetAction();
+        template <typename T>
+        [[nodiscard]] InputAction& GetAction();
 
     private:
         void OnKeyPressedEvent(KeyPressedEvent event);
         void OnKeyReleasedEvent(KeyReleasedEvent event);
         void OnTickEvent(TickEvent event);
-        void ProcessInput(InputKey input);
     };
 
     template <InputMappingContextType T>
@@ -88,6 +89,11 @@ namespace blackbox
         InputMappingContext context = T();
         contexts.insert(type);
         keybinds.merge(context.keybinds);
+
+        if (!contexts.contains(type))
+        {
+            LogEngine->Warn("Context `{}` couldn't be added.", type.name());
+        }
     }
 
     template <InputMappingContextType T>
@@ -103,15 +109,15 @@ namespace blackbox
         contexts.erase(type);
     }
 
-    template <InputActionType T>
-    T& Input::GetAction()
+    template <typename T>
+    InputAction& Input::GetAction()
     {
         const auto type = std::type_index(typeid(T));
         if (!actions.contains(type))
         {
-            actions = std::make_unique<T>();
+            actions[type] = std::make_unique<InputAction>();
         }
 
-        return actions[type];
+        return *actions[type];
     }
 }

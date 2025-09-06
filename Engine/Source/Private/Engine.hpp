@@ -1,7 +1,11 @@
 ﻿#pragma once
 
 #include <memory>
+
+#include "Blackbox.hpp"
 #include "EventBus.hpp"
+#include "Input/InputMapping.hpp"
+#include "Input/InputMappingContext.hpp"
 #include "Input/InputValue.hpp"
 
 namespace blackbox
@@ -10,6 +14,17 @@ namespace blackbox
     class Container;
     class Window;
     class FileIO;
+
+    struct ExitEngineAction {};
+    struct EngineContext final : InputMappingContext<EngineContext>
+    {
+        // ReSharper disable once CppPossiblyUnintendedObjectSlicing
+        EngineContext() : InputMappingContext({
+            InputMapping<ExitEngineAction> {
+                {Keyboard::Escape}
+            },
+        }) {}
+    };
     
     class BlackboxEngine
     {
@@ -41,6 +56,8 @@ namespace blackbox
         void StartRendering(const Event&) { stopRendering = false; }
 
         void OnCloseAction(InputValue) { RequestShutdown({}); }
+        
+        void OnTriggeredAction(InputValue value) { LogEngine->Info("OnTriggeredAction {}", value.Get<float>()); }
     };
 }
 

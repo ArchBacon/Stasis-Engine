@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include <typeindex>
-#include <variant>
 
 namespace blackbox
 {
