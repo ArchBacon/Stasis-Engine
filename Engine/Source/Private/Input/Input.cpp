@@ -1,7 +1,7 @@
 ﻿#include "Input.hpp"
 
-#include <ranges>
-
+#include "Engine.hpp"
+#include "Events.hpp"
 #include "EventBus.hpp"
 
 namespace blackbox
@@ -9,123 +9,95 @@ namespace blackbox
     Input::Input(EventBus& eventbus)
         : eventbus(eventbus)
     {
-        eventbus.Subscribe<KeyPressedEvent>(this, &Input::OnKeyDown);
-        eventbus.Subscribe<KeyReleasedEvent>(this, &Input::OnKeyUp);
+        eventbus.Subscribe<KeyPressedEvent>(this, &Input::OnKeyPressedEvent);
+        eventbus.Subscribe<KeyReleasedEvent>(this, &Input::OnKeyReleasedEvent);
+        eventbus.Subscribe<TickEvent>(this, &Input::OnTickEvent);
     }
 
-    /** Event handlers */
-    void Input::Update()
+    void Input::RemoveAllContexts() { contexts.clear(); }
+    
+    void Input::OnKeyPressedEvent(const KeyPressedEvent event)
     {
-        for (auto& context : activeContexts | std::views::values)
+        if (!keybinds.contains({event.key}))
         {
-            for (auto& action : context.actions | std::views::values)
-            {
-                std::visit([&](auto&& inputAction)
-                {
-                    using ActionType = std::decay_t<decltype(inputAction)>;
-                    using ValueType = typename ActionType::type;
-                    
-                    if (inputAction.active)
-                    {
-                        for (auto& callback : inputAction.onTriggeredCallbacks)
-                        {
-                            callback(ValueType(true));
-                        }
-                    }
-                }, action);
-            } 
+            return;
         }
-    }
-
-    void Input::OnKeyDown(KeyPressedEvent event)
-    {
-        for (auto& context : activeContexts | std::views::values)
+        
+        const auto binds = keybinds[{event.key}];
+        if (!contexts.contains(binds->contextType))
         {
-            for (auto& action : context.actions | std::views::values)
-            {
-                std::visit([&](auto&& inputAction)
-                {
-                    using ActionType = std::decay_t<decltype(inputAction)>;
-                    using ValueType = typename ActionType::type;
-
-                    for (auto key : inputAction.keys)
-                    {
-                        if (std::get<Keyboard>(key) == event.key)
-                        {
-                            inputAction.active = true;
-                            for (auto& callback : inputAction.onStartedCallbacks)
-                            {
-                                callback(ValueType(true));
-                            }
-                        }
-                    }
-                }, action);
-            } 
+            return; // Key does not trigger if the corresponding context isn't active
         }
-    }
-
-    void Input::OnKeyUp(const KeyReleasedEvent event)
-    {
-        for (auto& context : activeContexts | std::views::values)
+        
+        float2 value {1.0f, 0.0f};
+        for (const auto& mod : binds->modifiers)
         {
-            for (auto& action : context.actions | std::views::values)
-            {
-                std::visit([&](auto&& inputAction)
-                {
-                    using ActionType = std::decay_t<decltype(inputAction)>;
-                    using ValueType = typename ActionType::type;
-
-                    for (auto key : inputAction.keys)
-                    {
-                        if (std::get<Keyboard>(key) == event.key)
-                        {
-                            inputAction.active = false;
-                            for (auto& callback : inputAction.onEndedCallbacks)
-                            {
-                                callback(ValueType(false));
-                            } 
-                        }
-                    } 
-                }, action);
-            } 
+            value = mod->Execute(value);
         }
-    }
 
-    /** Context methods */
-    InputContext& Input::GetContext(const std::string& name)
-    {
-        // If context is active, return it
-        if (activeContexts.contains(name))
-            return activeContexts[name];
+        const auto& action = actions[binds->actionType];
+        for (auto& callback : action->onStartedCallbacks)
+        {
+            callback(value);
+        }
 
-        // otherwise return existing or created context
-        auto& context = inactiveContexts[name];
-        context.name = name;
-        return context;
+        activeKeys.insert({event.key});
     }
     
-    void Input::EnableContext(const std::string& name)
+    void Input::OnKeyReleasedEvent(const KeyReleasedEvent event)
     {
-        if (inactiveContexts.contains(name))
+        if (!keybinds.contains({event.key}))
         {
-            // Move context from inactive to active
-            auto context = inactiveContexts.extract(name);
-            activeContexts.insert(std::move(context));
+            return;
         }
-    }
-
-    void Input::DisableContext(const std::string& name)
-    {
-        if (activeContexts.contains(name))
+        
+        const auto binds = keybinds[{event.key}];
+        if (!contexts.contains(binds->contextType))
         {
-            // Move context from active to inactive
-            auto context = activeContexts.extract(name);
-            inactiveContexts.insert(std::move(context));
+            return;
         }
+        
+        float2 value {0.0f, 0.0f};
+        for (const auto& mod : binds->modifiers)
+        {
+            value = mod->Execute(value);
+        }
+        
+        const auto& action = actions[binds->actionType];
+        for (auto& callback : action->onEndedCallbacks)
+        {
+            callback({value});
+        }
+        
+        activeKeys.erase({event.key});
     }
-
-    void Input::DisableAllContexts()
+    
+    void Input::OnTickEvent(const TickEvent)
     {
-        inactiveContexts.merge(activeContexts);
+        for (auto& key : activeKeys)
+        {
+            if (!keybinds.contains(key))
+            {
+                continue;
+            }
+            
+            const auto binds = keybinds[key];
+            if (!contexts.contains(binds->contextType))
+            {
+                continue;
+            }
+        
+            float2 value {1.0f, 0.0f}; // TODO: what is the default key value? this is correct for keyboard, but doesnt work for controllers
+            for (const auto& mod : binds->modifiers)
+            {
+                value = mod->Execute(value);
+            }
+        
+            const auto& action = actions[binds->actionType];
+            for (auto& callback : action->onTriggeredCallbacks)
+            {
+                callback({value});
+            }
+        } 
     }
 }

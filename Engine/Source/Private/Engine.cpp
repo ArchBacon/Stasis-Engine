@@ -10,9 +10,6 @@
 #include "Window.hpp"
 #include "Helpers/SDL3EventHelper.hpp"
 #include "Input/Input.hpp"
-#include "Input/InputActionType.hpp"
-#include "Input/InputContext.hpp"
-#include "Input/InputKeys.hpp"
 
 blackbox::BlackboxEngine Engine;
 
@@ -21,7 +18,7 @@ void blackbox::BlackboxEngine::Initialize()
     LogEngine->Trace("Initializing Engine...");
 
     SDL_Init(SDL_INIT_VIDEO);
-
+    
     // Populate the DI container
     container = std::make_unique<Container>();
     eventbus = container->Register<EventBus>();
@@ -36,13 +33,7 @@ void blackbox::BlackboxEngine::Initialize()
     eventbus->Subscribe<WindowRestoredEvent>(this, &BlackboxEngine::StartRendering);
     eventbus->Subscribe<WindowFocusGainedEvent>(this, &BlackboxEngine::StartRendering);
 
-    /** TODO: move to editor instead of engine itself */
-    // Get/Create context
-    auto& windowContext = input->GetContext("WindowContext");
-    // add actions to context
-    windowContext.AddAction<bool>("CloseAction", {Keyboard::Escape});
-    // Enable context so that it can be used
-    input->EnableContext("WindowContext");
+    input->AddContext<EngineContext>();
 }
 
 void blackbox::BlackboxEngine::Run()
@@ -50,8 +41,9 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
-    auto& action = input->GetContext("WindowContext").GetAction<bool>("CloseAction");
-    action.OnStarted(this, &BlackboxEngine::OnCloseAction);
+    // TODO: Move to editor play window once it's in, since this shouldn't be default for every project
+    auto& exitEvent = input->GetAction<ExitEngineAction>();
+    exitEvent.OnStarted(this, &BlackboxEngine::OnCloseAction);
     
     while (isRunning)
     {
@@ -75,7 +67,7 @@ void blackbox::BlackboxEngine::Run()
             continue;
         }
 
-        input->Update(); // TODO: Consider sending tick event through event bus
+        eventbus->Broadcast(TickEvent{.deltaTime = deltaTime});
         window->SwapBuffers();
         
         frameNumber++;

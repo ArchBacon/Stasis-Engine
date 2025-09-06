@@ -4,6 +4,9 @@
 
 #include "Blackbox.hpp"
 #include "EventBus.hpp"
+#include "Input/InputMapping.hpp"
+#include "Input/InputMappingContext.hpp"
+#include "Input/InputValue.hpp"
 
 namespace blackbox
 {
@@ -11,6 +14,17 @@ namespace blackbox
     class Container;
     class Window;
     class FileIO;
+
+    struct ExitEngineAction {};
+    struct EngineContext final : InputMappingContext<EngineContext>
+    {
+        // ReSharper disable once CppPossiblyUnintendedObjectSlicing
+        EngineContext() : InputMappingContext({
+            InputMapping<ExitEngineAction> {
+                {Keyboard::Escape},
+            },
+        }) {}
+    };
     
     class BlackboxEngine
     {
@@ -41,7 +55,7 @@ namespace blackbox
         void StopRendering(const Event&) { stopRendering = true; }
         void StartRendering(const Event&) { stopRendering = false; }
 
-        void OnCloseAction(bool) { RequestShutdown({}); }
+        void OnCloseAction(InputValue) { RequestShutdown({}); }
     };
 }
 
