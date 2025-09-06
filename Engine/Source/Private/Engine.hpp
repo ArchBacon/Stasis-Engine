@@ -21,7 +21,7 @@ namespace blackbox
         // ReSharper disable once CppPossiblyUnintendedObjectSlicing
         EngineContext() : InputMappingContext({
             InputMapping<ExitEngineAction> {
-                {Keyboard::Escape}
+                {Keyboard::Escape},
             },
         }) {}
     };
@@ -56,8 +56,6 @@ namespace blackbox
         void StartRendering(const Event&) { stopRendering = false; }
 
         void OnCloseAction(InputValue) { RequestShutdown({}); }
-        
-        void OnTriggeredAction(InputValue value) { LogEngine->Info("OnTriggeredAction {}", value.Get<float>()); }
     };
 }
 

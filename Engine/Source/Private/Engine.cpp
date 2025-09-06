@@ -41,9 +41,9 @@ void blackbox::BlackboxEngine::Run()
     auto previousTime = std::chrono::high_resolution_clock::now();
     SDL_Event event;
 
+    // TODO: Move to editor play window once it's in, since this shouldn't be default for every project
     auto& exitEvent = input->GetAction<ExitEngineAction>();
-    exitEvent.OnTriggered(this, &BlackboxEngine::OnTriggeredAction);
-    exitEvent.OnEnded(this, &BlackboxEngine::OnCloseAction);
+    exitEvent.OnStarted(this, &BlackboxEngine::OnCloseAction);
     
     while (isRunning)
     {
